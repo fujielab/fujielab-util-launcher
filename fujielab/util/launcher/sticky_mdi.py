@@ -8,6 +8,26 @@ HYSTERESIS = 10   # ヒステリシス（ピクセル）
 class StickyMdiSubWindow(QMdiSubWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Apply a custom style to give subwindows a unique look
+        style = """
+        QMdiSubWindow {
+            background: #2b2b2b;
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
+        }
+        QMdiSubWindow::title {
+            background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                       stop:0 #404040, stop:1 #323232);
+            color: #ffffff;
+            padding: 4px;
+        }
+        QMdiSubWindow::separator {
+            background: #555555;
+            width: 1px;
+            height: 1px;
+        }
+        """
+        self.setStyleSheet(style)
         self._dragging = False
         self._resizing = False
         self._drag_start_pos = None
