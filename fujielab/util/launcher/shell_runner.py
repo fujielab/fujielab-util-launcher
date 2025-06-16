@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QTextEdit, QLabel, QLineEdit, QPushButton, QHBoxLayout, QFormLayout, QVBoxLayout, QSizePolicy, QFileDialog, QGridLayout
 from PyQt5.QtCore import QProcess
+import platform
 from pathlib import Path
 from .shell_settings_dialog import ShellSettingsDialog
 from .debug_util import debug_print, error_print
@@ -88,9 +89,15 @@ class ShellRunnerWidget(QWidget):
         self.output_view.append(f"[debug] コマンドライン: {self.program_cmdline}")
         self.output_view.append(f"[debug] 作業ディレクトリ: {self.working_dir}")
         self.process = QProcess(self)
-        # コマンドラインをシェルで実行
-        self.process.setProgram("/bin/sh")
-        self.process.setArguments(["-c", self.program_cmdline])
+        # Select shell executable based on the OS
+        # Windows requires cmd.exe while Unix uses /bin/sh
+        shell = "/bin/sh"
+        args = ["-c", self.program_cmdline]
+        if platform.system() == "Windows":  # Windows uses cmd.exe
+            shell = "cmd.exe"
+            args = ["/C", self.program_cmdline]
+        self.process.setProgram(shell)
+        self.process.setArguments(args)
         self.process.setWorkingDirectory(self.working_dir)
         self.process.readyReadStandardOutput.connect(self.handle_stdout)
         self.process.readyReadStandardError.connect(self.handle_stderr)
