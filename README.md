@@ -19,7 +19,7 @@ fujielab-launcher [options]
 #### Options
 
 - `-d`, `--debug`: Enable debug mode. Detailed log messages will be displayed.
-- `--reset-config`: Initialize the configuration file. Existing settings will be overwritten.
+- `--reset-config`: Initialize the YAML configuration file (`config.yaml`). Existing settings will be overwritten.
 - `--version`: Display version information and exit.
 - `-h`, `--help`: Display help message and exit.
 

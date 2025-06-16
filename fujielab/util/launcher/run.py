@@ -1,6 +1,7 @@
 import os
 import sys
-import json
+
+from .config_manager import LauncherConfigManager
 import time
 import argparse
 from pathlib import Path
@@ -49,43 +50,40 @@ class FadingSplashScreen(QSplashScreen):
         debug_print("[debug] スプラッシュスクリーンのフェードアウトを開始")
 
 def get_default_config_path():
-    # XDG_CONFIG_HOME or ~/.config/fujielab_launcher/config.json など
-    config_dir = os.environ.get("XDG_CONFIG_HOME")
-    if not config_dir:
-        config_dir = os.path.join(str(Path.home()), ".config")
-    config_dir = os.path.join(config_dir, "fujielab_launcher")
-    os.makedirs(config_dir, exist_ok=True)
-    return os.path.join(config_dir, "config.json")
+    """Return the path to the launcher's default YAML configuration file."""
+    return LauncherConfigManager.get_default_config_path()
 
 def create_default_config(config_path):
-    # システムPython
+    """Create a default YAML configuration using ``LauncherConfigManager``."""
     import platform
+    import subprocess
+
     try:
         if platform.system() == "Windows":
-            import subprocess
             sys_path = subprocess.check_output(["where", "python"], universal_newlines=True).strip().split("\n")[0]
         else:
-            import subprocess
             sys_path = subprocess.check_output(["which", "python3"], universal_newlines=True).strip()
     except Exception:
         sys_path = sys.executable
-    config = {
-        "interpreter": sys_path,
-        "workdir": os.getcwd()
-    }
-    with open(config_path, "w", encoding="utf-8") as f:
-        json.dump(config, f, ensure_ascii=False, indent=2)
+
+    manager = LauncherConfigManager(config_path)
+    manager.set_default_interpreter("system", sys_path)
+    manager.set_default_workdir(os.getcwd())
 
 def ensure_config(reset=False, ask_dialog=None):
+    """Ensure that the YAML configuration file exists."""
     config_path = get_default_config_path()
+
     if reset and os.path.exists(config_path):
         if ask_dialog:
             res = ask_dialog()
             if res == QMessageBox.No:
                 return config_path
+        os.remove(config_path)
+
+    if not os.path.exists(config_path):
         create_default_config(config_path)
-    elif not os.path.exists(config_path):
-        create_default_config(config_path)
+
     return config_path
 
 def ask_reset_dialog():
