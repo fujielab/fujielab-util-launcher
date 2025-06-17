@@ -1,9 +1,8 @@
-from PyQt5.QtWidgets import QWidget, QTextEdit, QLabel, QLineEdit, QPushButton, QHBoxLayout, QFormLayout, QVBoxLayout, QSizePolicy, QDialog, QComboBox, QFileDialog, QGridLayout
+from PyQt5.QtWidgets import QWidget, QTextEdit, QLabel, QLineEdit, QPushButton, QHBoxLayout, QFormLayout, QVBoxLayout, QSizePolicy, QComboBox, QFileDialog, QGridLayout
 from PyQt5.QtCore import QProcess, Qt
 import subprocess
 import json
 from pathlib import Path
-from .settings_dialog import PythonSettingsDialog
 from .debug_util import debug_print, error_print
 
 interpreter_cache = {}
@@ -168,29 +167,6 @@ class ScriptRunnerWidget(QWidget):
             error_print(f"[warn] conda環境の取得に失敗しました: {e}")
         interpreter_cache = interpreters
         return interpreters
-
-    def configure(self):
-        interp_map = self.get_interpreters()
-        dialog = PythonSettingsDialog(
-            self,
-            envs=list(interp_map.keys()),
-            current_env=self.interpreter_combo.currentText(),
-            current_script=self.script_path,
-            current_dir=self.working_dir,
-            get_interpreters_func=self.get_interpreters
-        )
-        if dialog.exec_() == QDialog.Accepted:
-            label, script, workdir = dialog.get_values()
-            self.interpreter_combo.setCurrentText(label)
-            self.interpreter_path = interp_map.get(label, "python")
-            self.script_path = script
-            self.working_dir = workdir or (str(Path(script).parent) if script else "")
-            self.script_value.setText(Path(self.script_path).name if self.script_path else "")
-            self.dir_value.setText(Path(self.working_dir).name if self.working_dir else "")
-            if self.parent() and self.script_path:
-                self.parent().setWindowTitle(Path(script).name)
-            if self.config_changed_callback:
-                self.config_changed_callback()
 
     def get_config(self):
         return {

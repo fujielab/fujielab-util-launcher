@@ -2,7 +2,6 @@ from PyQt5.QtWidgets import QWidget, QTextEdit, QLabel, QLineEdit, QPushButton, 
 from PyQt5.QtCore import QProcess
 import platform
 from pathlib import Path
-from .shell_settings_dialog import ShellSettingsDialog
 from .debug_util import debug_print, error_print
 
 class ShellRunnerWidget(QWidget):
