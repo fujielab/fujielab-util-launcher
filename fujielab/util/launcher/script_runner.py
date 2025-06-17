@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QTextEdit, QLabel, QLineEdit, QPushButton, QHBoxLayout, QFormLayout, QVBoxLayout, QSizePolicy, QComboBox, QFileDialog, QGridLayout
 from PyQt5.QtCore import QProcess, Qt
+from PyQt5.QtGui import QFontDatabase
 import subprocess
 import json
 from pathlib import Path
@@ -20,6 +21,8 @@ class ScriptRunnerWidget(QWidget):
         self.stderr_buffer = ""
         self.output_view = QTextEdit()
         self.output_view.setReadOnly(True)
+        fixed_font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+        self.output_view.setFont(fixed_font)
         self.interpreter_label = QLabel("インタプリタ:")
         self.script_label = QLabel("スクリプト:")
         self.dir_label = QLabel("作業ディレクトリ:")
@@ -75,6 +78,7 @@ class ScriptRunnerWidget(QWidget):
         self.input_line = QLineEdit()
         self.input_line.setPlaceholderText("標準入力をここに入力しEnterで送信")
         self.input_line.setFixedHeight(22)
+        self.input_line.setFont(fixed_font)
         self.input_line.returnPressed.connect(self.send_stdin)
         layout.addWidget(self.input_line)
         self.setLayout(layout)

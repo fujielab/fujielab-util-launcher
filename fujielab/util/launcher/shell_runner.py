@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QTextEdit, QLabel, QLineEdit, QPushButton, QHBoxLayout, QFormLayout, QVBoxLayout, QSizePolicy, QFileDialog, QGridLayout
 from PyQt5.QtCore import QProcess
+from PyQt5.QtGui import QFontDatabase
 import platform
 from pathlib import Path
 from .debug_util import debug_print, error_print
@@ -12,6 +13,8 @@ class ShellRunnerWidget(QWidget):
         self.working_dir = ""
         self.output_view = QTextEdit()
         self.output_view.setReadOnly(True)
+        fixed_font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+        self.output_view.setFont(fixed_font)
         self.program_label = QLabel("コマンドライン:")
         self.dir_label = QLabel("作業ディレクトリ:")
         self.program_value = QLineEdit()
@@ -53,6 +56,7 @@ class ShellRunnerWidget(QWidget):
         self.input_line = QLineEdit()
         self.input_line.setPlaceholderText("標準入力をここに入力しEnterで送信")
         self.input_line.setFixedHeight(22)
+        self.input_line.setFont(fixed_font)
         self.input_line.returnPressed.connect(self.send_stdin)
         layout.addWidget(self.input_line)
         self.setLayout(layout)
