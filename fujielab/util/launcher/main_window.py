@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QMenuBar, QAction, QSizePolicy, QMdiArea, QFileDialog, QMessageBox
+from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QMenuBar, QAction, QSizePolicy, QMdiArea, QFileDialog, QMessageBox, QToolBar, QMenu
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtCore import Qt, QPoint, QRect
 from .sticky_mdi import StickyMdiSubWindow
@@ -18,7 +18,7 @@ class CustomMdiArea(QMdiArea):
     """
     def __init__(self, parent=None):
         super().__init__(parent)
-    
+
     def tileSubWindows(self):
         """
         サブウィンドウをタイル状に配置する
@@ -26,31 +26,31 @@ class CustomMdiArea(QMdiArea):
         """
         if not self.subWindowList():
             return
-            
+
         # アクティブなサブウィンドウ数
         windows = self.subWindowList()
         windows_count = len(windows)
-        
+
         # ウィンドウ無しまたは1つだけなら最大化
         if windows_count == 0:
             return
         if windows_count == 1:
             windows[0].showMaximized()
             return
-        
+
         # タイルレイアウトのグリッドサイズを決定
         # できるだけ正方形に近くなるように列数と行数を計算
         cols = math.ceil(math.sqrt(windows_count))
         rows = math.ceil(windows_count / cols)
-        
+
         # タイルのセルサイズを計算
         area_width = self.width()
         area_height = self.height()
         cell_width = area_width / cols
         cell_height = area_height / rows
-        
+
         debug_print(f"[debug] タイル配置: {windows_count}ウィンドウ, {cols}列 x {rows}行, セルサイズ: {cell_width}x{cell_height}")
-        
+
         # 各グリッドセル位置を計算
         grid_cells = []
         for row in range(rows):
@@ -68,7 +68,7 @@ class CustomMdiArea(QMdiArea):
                         int(cell_rect.top() + cell_rect.height() / 2)
                     )
                     grid_cells.append((cell_rect, cell_center))
-        
+
         # 各ウィンドウの現在の位置を記憶
         window_positions = []
         for window in windows:
@@ -79,45 +79,45 @@ class CustomMdiArea(QMdiArea):
                 int(window_rect.top() + window_rect.height() / 2)
             )
             window_positions.append((window, window_center))
-        
+
         # 各グリッドセルに最も近いウィンドウを割り当てる
         assigned_windows = set()
         assignments = []  # (window, cell_rect) のリスト
-        
+
         # 各グリッドセルについて、最も近いまだ割り当てられていないウィンドウを見つける
         for cell_rect, cell_center in grid_cells:
             best_window = None
             min_distance = float('inf')
-            
+
             for window, window_center in window_positions:
                 if window in assigned_windows:
                     continue
-                
+
                 # 中心点間の距離を計算
                 distance = math.sqrt(
                     (cell_center.x() - window_center.x()) ** 2 +
                     (cell_center.y() - window_center.y()) ** 2
                 )
-                
+
                 if distance < min_distance:
                     min_distance = distance
                     best_window = window
-            
+
             if best_window:
                 assigned_windows.add(best_window)
                 assignments.append((best_window, cell_rect))
-        
+
         # 残っているウィンドウがあれば、残りのセルに割り当て
         remaining_windows = [w for w, _ in window_positions if w not in assigned_windows]
         remaining_cells = [cell for cell, _ in grid_cells[len(assignments):]]
-        
+
         for window, cell_rect in zip(remaining_windows, remaining_cells):
             assignments.append((window, cell_rect))
-        
+
         # ウィンドウを新しい位置に移動
         for window, cell_rect in assignments:
             window.setGeometry(cell_rect)
-            
+
         debug_print(f"[debug] タイル配置完了: {len(assignments)}ウィンドウを配置しました")
 
 class MainWindow(QMainWindow):
@@ -130,9 +130,21 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(central)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
+
+        # QMenuBarの代わりにQToolBarを使用してメニューを作成
+        # ツールバーは折りたたまれることがないので、常に展開したメニューが表示される
+        self.tool_bar = QToolBar("メインメニュー", self)
+        self.tool_bar.setMovable(False)  # 移動できないように設定
+        self.tool_bar.setFloatable(False)  # フロート不可
+        self.tool_bar.setContextMenuPolicy(Qt.PreventContextMenu)  # コンテキストメニューを無効化
+        self.tool_bar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.tool_bar.setMinimumHeight(32)  # 十分な高さを確保
+
+        # 標準メニューバーも保持するが非表示
         self.menu_bar = QMenuBar(self)
-        self.menu_bar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        layout.addWidget(self.menu_bar, stretch=0)
+        self.menu_bar.hide()  # メニューバーを非表示
+
+        layout.addWidget(self.tool_bar, stretch=0)
         self.mdi = CustomMdiArea()
         layout.addWidget(self.mdi, stretch=1)
         self.initMenu()
@@ -142,11 +154,9 @@ class MainWindow(QMainWindow):
         self.launcher_cache = []
         # 終了処理中フラグの初期化
         self.in_closing = False
-
         # MDIエリアのサブウィンドウアクティブ化時に設定を保存
         self.mdi.subWindowActivated.connect(self.saveAllLaunchers)
-
-        # 設定マネージャの初期化
+          # 設定マネージャの初期化
         self.config_manager = LauncherConfigManager()
         self._geometry_restored = False
         self._suppress_save = True
@@ -157,70 +167,118 @@ class MainWindow(QMainWindow):
         debug_print("[debug] ======== MainWindow初期化完了 ========")
 
     def initMenu(self):
-        menubar = self.menu_bar
-        menubar.clear()
-        fileMenu = menubar.addMenu('ファイル')
+        # ツールバーとメニューバーをクリア
+        self.tool_bar.clear()
+        self.menu_bar.clear()
+
+        # ===== ファイルメニュー =====
+        fileMenu = QMenu('ファイル', self)
+
+        # 新規Pythonランチャー
         newPythonLauncherAct = QAction('新規Pythonランチャー', self)
         newPythonLauncherAct.setShortcut(QKeySequence('Ctrl+N'))
         newPythonLauncherAct.triggered.connect(lambda: self.createPythonLauncherWindow())
         fileMenu.addAction(newPythonLauncherAct)
+
+        # 新規シェルランチャー
         newShellLauncherAct = QAction('新規シェルランチャー', self)
         newShellLauncherAct.setShortcut(QKeySequence('Shift+Ctrl+N'))
         newShellLauncherAct.triggered.connect(lambda: self.createShellLauncherWindow())
         fileMenu.addAction(newShellLauncherAct)
+
         fileMenu.addSeparator()
+
+        # 設定のインポート
         importAct = QAction('設定のインポート', self)
         importAct.setShortcut(QKeySequence('Ctrl+I'))
         importAct.triggered.connect(self.importConfig)
         fileMenu.addAction(importAct)
+
+        # 設定のエクスポート
         exportAct = QAction('設定のエクスポート', self)
         exportAct.setShortcut(QKeySequence('Shift+Ctrl+S'))
         exportAct.triggered.connect(self.exportConfig)
         fileMenu.addAction(exportAct)
+
         fileMenu.addSeparator()
+
+        # 終了
         exitAct = QAction('終了', self)
         exitAct.setShortcut(QKeySequence.Quit)
         exitAct.triggered.connect(self.close)
         fileMenu.addAction(exitAct)
-        arrangeMenu = menubar.addMenu('整列')
+
+        # ファイルメニューをツールバーに追加
+        fileMenuAction = QAction('ファイル', self)
+        fileMenuAction.setMenu(fileMenu)
+        self.tool_bar.addAction(fileMenuAction)
+
+        # ===== 整列メニュー =====
+        arrangeMenu = QMenu('整列', self)
+
+        # タイル
         tileAct = QAction('タイル', self)
         tileAct.triggered.connect(self.mdi.tileSubWindows)
         arrangeMenu.addAction(tileAct)
+
+        # カスケード
         cascadeAct = QAction('カスケード', self)
         cascadeAct.triggered.connect(self.mdi.cascadeSubWindows)
         arrangeMenu.addAction(cascadeAct)
 
-        # 設定メニュー追加
-        settingsMenu = menubar.addMenu('設定')
+        # 整列メニューをツールバーに追加
+        arrangeMenuAction = QAction('整列', self)
+        arrangeMenuAction.setMenu(arrangeMenu)
+        self.tool_bar.addAction(arrangeMenuAction)
+
+        # ===== 設定メニュー =====
+        settingsMenu = QMenu('設定', self)
+
+        # グローバル設定
         settingsAct = QAction('グローバル設定', self)
         settingsAct.setShortcut(QKeySequence('Ctrl+,'))
         settingsAct.triggered.connect(self.openSettingsDialog)
         settingsMenu.addAction(settingsAct)
 
-        menu_style = """
-        QMenuBar {
+        # 設定メニューをツールバーに追加
+        settingsMenuAction = QAction('設定', self)
+        settingsMenuAction.setMenu(settingsMenu)
+        self.tool_bar.addAction(settingsMenuAction)
+
+        # メニューバーにも同じメニューを追加（ショートカットキー用）
+        self.menu_bar.addMenu(fileMenu)
+        self.menu_bar.addMenu(arrangeMenu)
+        self.menu_bar.addMenu(settingsMenu)        # ツールバーとメニューのスタイル設定
+        style_sheet = """
+        QToolBar {
             background: #ffffff;
             border-bottom: 1px solid #b0b0b0;
-            font-size: 14px;
-            font-weight: bold;
-            padding: 0 2px;
-            height: 28px;
+            spacing: 5px;
+            padding: 2px 10px;
         }
-        QMenuBar::item {
+        QToolBar QToolButton {
             background: transparent;
             color: #222;
-            padding: 4px 8px 4px 8px;
-            border-radius: 4px 4px 0 0;
-            margin: 0 1px;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 4px 10px;
+            margin: 0 3px;
+            border-radius: 4px;
+            min-width: 80px;
+            font-family: "Meiryo", "MS PGothic", sans-serif;
         }
-        QMenuBar::item:selected {
+        QToolBar QToolButton:hover {
             background: #e6e6e6;
             color: #1565c0;
+        }
+        QToolBar QToolButton:pressed {
+            background: #d0d0d0;
         }
         QMenu {
             background: #ffffff;
             border: 1px solid #b0b0b0;
-            font-size: 13px;
+            font-size: 14px;
+            font-family: "Meiryo", "MS PGothic", sans-serif;
         }
         QMenu::item {
             padding: 6px 24px 6px 16px;
@@ -231,7 +289,7 @@ class MainWindow(QMainWindow):
             color: #1565c0;
         }
         """
-        menubar.setStyleSheet(menu_style)
+        self.setStyleSheet(style_sheet)
 
     def createPythonLauncherWindow(self, config=None, geometry=None):
         sub = StickyMdiSubWindow()
@@ -415,7 +473,15 @@ class MainWindow(QMainWindow):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+
+        # ツールバーのサイズをウィンドウに合わせる
+        self.tool_bar.setMinimumWidth(self.width())
+        self.tool_bar.setMaximumWidth(self.width())
+
+        # メニューバー（非表示だが、ショートカットのために必要）も調整
         self.menu_bar.setMinimumWidth(self.width())
+        self.menu_bar.setMaximumWidth(self.width())
+
         self.saveAllLaunchers()
 
     def moveEvent(self, event):

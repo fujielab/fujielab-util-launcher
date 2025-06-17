@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import QWidget, QTextEdit, QLabel, QLineEdit, QPushButton, 
 from PyQt5.QtCore import QProcess
 from PyQt5.QtGui import QFontDatabase
 import platform
+import os  # EXEファイル実行のため追加
 from pathlib import Path
 from .debug_util import debug_print, error_print
 
@@ -11,6 +12,8 @@ class ShellRunnerWidget(QWidget):
         self.process = None
         self.program_cmdline = ""
         self.working_dir = ""
+        self.exe_path = ""  # EXEファイルのパス（Windows環境用）
+        self.is_windows = platform.system() == "Windows"  # Windows環境かどうか
         self.output_view = QTextEdit()
         self.output_view.setReadOnly(True)
         fixed_font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
@@ -47,6 +50,20 @@ class ShellRunnerWidget(QWidget):
         form_layout.addWidget(self.dir_label, 1, 0)
         form_layout.addWidget(self.dir_value, 1, 1)
         form_layout.addWidget(self.dir_select_button, 1, 2)
+
+        # Windows環境の場合のみEXEファイル選択UIを追加
+        if self.is_windows:
+            self.exe_label = QLabel("EXEファイル(オプション):")
+            self.exe_value = QLineEdit()
+            self.exe_value.setReadOnly(True)
+            self.exe_select_button = QPushButton("選択")
+            self.exe_select_button.setFixedSize(48, 24)
+            self.exe_value.setFixedHeight(24)
+            self.exe_select_button.clicked.connect(self.select_exe)
+            form_layout.addWidget(self.exe_label, 2, 0)
+            form_layout.addWidget(self.exe_value, 2, 1)
+            form_layout.addWidget(self.exe_select_button, 2, 2)
+
         layout = QVBoxLayout()
         layout.setSpacing(2)
         layout.setContentsMargins(4, 4, 4, 4)
@@ -71,7 +88,44 @@ class ShellRunnerWidget(QWidget):
         path = QFileDialog.getExistingDirectory(self, "作業ディレクトリを選択", directory=self.working_dir or str(Path.cwd()))
         if path:
             self.working_dir = path
-            self.dir_value.setText(Path(self.working_dir).name if self.working_dir else "")
+            self.dir_value.setText(self.working_dir if self.working_dir else "")
+            self.dir_value.setToolTip(self.working_dir if self.working_dir else "")
+            if self.config_changed_callback:
+                self.config_changed_callback()
+
+    def select_exe(self):
+        """EXEファイルを選択するダイアログを表示（Windows環境のみ）"""
+        if not self.is_windows:
+            return
+
+        file_filter = "実行ファイル (*.exe);;すべてのファイル (*.*)"
+        start_dir = self.working_dir if self.working_dir else str(Path.cwd())
+        path, _ = QFileDialog.getOpenFileName(
+            self, "実行ファイルを選択", directory=start_dir, filter=file_filter
+        )
+        if path:
+            self.exe_path = path
+            # 作業ディレクトリが設定されている場合は相対パスに変換
+            if self.working_dir:
+                try:
+                    rel_path = os.path.relpath(path, self.working_dir)
+                    # 表示は相対パスにする
+                    self.exe_value.setText(rel_path)
+                    # ユーザーがコマンドラインを自分で入力していた場合は尊重する
+                    if not self.program_value.text().strip():
+                        # コマンドラインが空の場合のみEXEファイルのパスを設定
+                        self.program_value.setText(f'"{rel_path}"')
+                except ValueError:
+                    # 異なるドライブの場合などは絶対パスを使用
+                    self.exe_value.setText(path)
+                    if not self.program_value.text().strip():
+                        self.program_value.setText(f'"{path}"')
+            else:
+                # 作業ディレクトリが設定されていなければ絶対パスを使用
+                self.exe_value.setText(path)
+                if not self.program_value.text().strip():
+                    self.program_value.setText(f'"{path}"')
+
             if self.config_changed_callback:
                 self.config_changed_callback()
 
@@ -91,16 +145,56 @@ class ShellRunnerWidget(QWidget):
             return
         self.output_view.append(f"[debug] コマンドライン: {self.program_cmdline}")
         self.output_view.append(f"[debug] 作業ディレクトリ: {self.working_dir}")
+        # コマンドラインの種類を判断（EXEファイルかコマンドか）
         self.process = QProcess(self)
-        # Select shell executable based on the OS
-        # Windows requires cmd.exe while Unix uses /bin/sh
-        shell = "/bin/sh"
-        args = ["-c", self.program_cmdline]
-        if platform.system() == "Windows":  # Windows uses cmd.exe
-            shell = "cmd.exe"
-            args = ["/C", self.program_cmdline]
-        self.process.setProgram(shell)
-        self.process.setArguments(args)
+        command = self.program_cmdline.strip()
+
+        if self.is_windows:  # Windows環境のみEXE直接実行対応
+            exe_path, args = self._parse_exe_command(command)
+            if exe_path and '.exe' in exe_path.lower():
+                self.output_view.append(f"[debug] EXEファイル実行モード: {exe_path}")
+                self.output_view.append(f"[debug] 引数: {args}")
+
+                # 絶対パスでない場合、作業ディレクトリからの相対パスとして扱う
+                if not os.path.isabs(exe_path) and self.working_dir:
+                    full_exe_path = os.path.join(self.working_dir, exe_path)
+                    self.output_view.append(f"[debug] 絶対パスに変換: {full_exe_path}")
+
+                    # 実際に存在するか確認
+                    if os.path.exists(full_exe_path):
+                        self.output_view.append(f"[debug] EXEファイルが見つかりました: {full_exe_path}")
+                        # EXEファイルを直接実行（シェルを介さない）・引数も渡す
+                        self.process.setProgram(full_exe_path)
+                        self.process.setArguments(args)
+                    else:
+                        self.output_view.append(f"<span style='color:red;'>警告: 指定されたEXEファイルが見つかりません: {full_exe_path}</span>")
+                        # ファイルが見つからない場合も実行を試みる（エラーが発生する可能性あり）
+                        self.process.setProgram(full_exe_path)
+                        self.process.setArguments(args)
+                else:
+                    # 絶対パスの場合はそのまま実行
+                    if os.path.exists(exe_path):
+                        self.output_view.append(f"[debug] EXEファイルが見つかりました: {exe_path}")
+                        self.process.setProgram(exe_path)
+                        self.process.setArguments(args)
+                    else:
+                        self.output_view.append(f"<span style='color:red;'>警告: 指定されたEXEファイルが見つかりません: {exe_path}</span>")
+                        # ファイルが見つからない場合も実行を試みる（エラーが発生する可能性あり）
+                        self.process.setProgram(exe_path)
+                        self.process.setArguments(args)
+            else:
+                # 通常のコマンドラインの場合はシェル経由で実行
+                self.output_view.append("[debug] シェル実行モード")
+                shell = "cmd.exe"
+                args = ["/C", command]
+                self.process.setProgram(shell)
+                self.process.setArguments(args)
+        else:
+            # Unixシステムの場合
+            shell = "/bin/sh"
+            args = ["-c", command]
+            self.process.setProgram(shell)
+            self.process.setArguments(args)
         self.process.setWorkingDirectory(self.working_dir)
         self.process.readyReadStandardOutput.connect(self.handle_stdout)
         self.process.readyReadStandardError.connect(self.handle_stderr)
@@ -116,41 +210,41 @@ class ShellRunnerWidget(QWidget):
             self.output_view.append(f"詳細: {self.process.errorString()}")
 
     # Dockerコンテナに特化した処理は削除
-        
+
     def stop_program(self):
         if self.process and self.process.state() != QProcess.NotRunning:
             from PyQt5.QtCore import QCoreApplication
-            
+
             # 段階的なプロセス停止を試みる
             self.output_view.append("プログラムの停止を試みています...")
             self.output_view.repaint()
             QCoreApplication.processEvents()
-            
+
             # ステップ1: SIGINT (Ctrl+C相当) で停止を促す
             self.output_view.append("SIGINT送信 - 正常終了を2秒間待機中...")
             self.output_view.repaint()
             QCoreApplication.processEvents()
-            
+
             self.process.terminate()  # QProcess.terminateはSIGINTを送信
             if self.process.waitForFinished(2000):  # 2秒待機
                 self.output_view.append("✓ プログラムが正常に停止しました (SIGINT)")
                 self.output_view.repaint()
                 QCoreApplication.processEvents()
                 return
-            
+
             # ステップ2: SIGTERM (通常のkill) で終了を要求
             self.output_view.append("<span style='color:orange;'>⚠ SIGINTでの停止に失敗しました</span>")
             self.output_view.append("SIGTERM送信 - 終了を2秒間待機中...")
             self.output_view.repaint()
             QCoreApplication.processEvents()
-            
+
             self.process.kill()  # QProcess.killはSIGTERMを送信 (SIGKILL ではない)
             if self.process.waitForFinished(2000):  # 2秒待機
                 self.output_view.append("✓ プログラムが停止しました (SIGTERM)")
                 self.output_view.repaint()
                 QCoreApplication.processEvents()
                 return
-            
+
             # ステップ3: SIGKILL (kill -9) で強制終了
             import signal
             import os
@@ -158,14 +252,13 @@ class ShellRunnerWidget(QWidget):
             self.output_view.append("SIGKILL送信 - 強制終了を実行中...")
             self.output_view.repaint()
             QCoreApplication.processEvents()
-            
+
             try:
                 pid = self.process.processId()
                 os.kill(pid, signal.SIGKILL)
                 self.output_view.append("SIGKILL送信完了 - プロセス終了を待機中...")
                 self.output_view.repaint()
                 QCoreApplication.processEvents()
-                
                 self.process.waitForFinished(1000)  # 1秒待機
                 self.output_view.append("✓ プログラムを強制終了しました (SIGKILL)")
                 self.output_view.repaint()
@@ -174,25 +267,43 @@ class ShellRunnerWidget(QWidget):
                 self.output_view.append(f"<span style='color:red;'>❌ プロセスの強制終了に失敗しました: {e}</span>")
                 self.output_view.repaint()
                 QCoreApplication.processEvents()
+    def _decode_and_append_output(self, data, is_stderr=False):
+        try:
+            # Windowsの場合はShift-JIS（CP932）でデコードを試みる
+            if platform.system() == "Windows":
+                text = bytes(data).decode("cp932", errors="replace")
+            else:
+                text = bytes(data).decode("utf-8", errors="replace")
+            if is_stderr:
+                self.output_view.append(f"<span style='color:red;'>{text}</span>")
+            else:
+                self.output_view.append(text)
+        except Exception as e:
+            error_text = f"デコードエラー: {e}"
+            self.output_view.append(f"<span style='color:red;'>{error_text}</span>")
+            debug_print(f"{'StdErr' if is_stderr else 'StdOut'} デコードエラー: {e}")
 
     def handle_stdout(self):
         data = self.process.readAllStandardOutput()
-        text = bytes(data).decode("utf-8")
-        self.output_view.append(text)
+        self._decode_and_append_output(data, is_stderr=False)
 
     def handle_stderr(self):
         data = self.process.readAllStandardError()
-        text = bytes(data).decode("utf-8")
-        self.output_view.append(f"<span style='color:red;'>{text}</span>")
+        self._decode_and_append_output(data, is_stderr=True)
+        debug_print(f"StdErr デコードエラー: {e}")
 
     def process_finished(self):
         self.output_view.append("プログラムが終了しました")
 
     def get_config(self):
-        return {
+        config = {
             'cmdline': self.program_cmdline,
             'workdir': self.working_dir
         }
+        # Windows環境の場合のみEXEパスを設定に含める
+        if self.is_windows:
+            config['exepath'] = self.exe_path
+        return config
 
     def apply_config(self, config):
         self.program_cmdline = config.get('cmdline', '')
@@ -200,21 +311,36 @@ class ShellRunnerWidget(QWidget):
         self.program_value.setText(self.program_cmdline)
         self.dir_value.setText(Path(self.working_dir).name if self.working_dir else "")
 
+        # Windows環境の場合のみEXEパスを設定
+        if self.is_windows:
+            self.exe_path = config.get('exepath', '')
+            if self.exe_path:
+                if self.working_dir:
+                    try:
+                        # 作業ディレクトリからの相対パスを表示
+                        rel_path = os.path.relpath(self.exe_path, self.working_dir)
+                        self.exe_value.setText(rel_path)
+                    except ValueError:
+                        # 異なるドライブの場合は絶対パス
+                        self.exe_value.setText(self.exe_path)
+                else:
+                    self.exe_value.setText(self.exe_path)
+
     def closeEvent(self, event):
         """ウィンドウが閉じられるときにプロセスを終了させる"""
         from PyQt5.QtCore import QCoreApplication
-        
+
         self.output_view.append("[debug] closeEvent: プロセス終了処理")
         self.output_view.repaint()
         QCoreApplication.processEvents()
-        
+
         if self.process and self.process.state() != QProcess.NotRunning:
             # 段階的なプロセス停止を試みる（短い待機時間で）
             # ステップ1: SIGINT
             self.output_view.append("SIGINT送信中...")
             self.output_view.repaint()
             QCoreApplication.processEvents()
-            
+
             self.process.terminate()
             if self.process.waitForFinished(500):  # 0.5秒待機
                 self.output_view.append("プロセスが停止しました (SIGINT)")
@@ -222,12 +348,12 @@ class ShellRunnerWidget(QWidget):
                 QCoreApplication.processEvents()
                 event.accept()
                 return
-            
+
             # ステップ2: SIGTERM
             self.output_view.append("SIGTERM送信中...")
             self.output_view.repaint()
             QCoreApplication.processEvents()
-            
+
             self.process.kill()
             if self.process.waitForFinished(500):  # 0.5秒待機
                 self.output_view.append("プロセスが停止しました (SIGTERM)")
@@ -235,12 +361,12 @@ class ShellRunnerWidget(QWidget):
                 QCoreApplication.processEvents()
                 event.accept()
                 return
-            
+
             # ステップ3: SIGKILL
             self.output_view.append("SIGKILL送信中...")
             self.output_view.repaint()
             QCoreApplication.processEvents()
-            
+
             try:
                 import signal
                 import os
@@ -262,20 +388,20 @@ class ShellRunnerWidget(QWidget):
             try:
                 # __del__メソッドではUI更新はできない可能性が高いため、
                 # プロセスの終了処理のみを簡潔に行う
-                
+
                 # 段階的なプロセス停止（超短い待機時間で）
                 # ここではログ出力や画面更新は行わない
-                
+
                 # ステップ1: SIGINT
                 self.process.terminate()
                 if self.process.waitForFinished(200):  # 0.2秒待機
                     return
-                
+
                 # ステップ2: SIGTERM
                 self.process.kill()
                 if self.process.waitForFinished(200):  # 0.2秒待機
                     return
-                
+
                 # ステップ3: SIGKILL
                 import signal
                 import os

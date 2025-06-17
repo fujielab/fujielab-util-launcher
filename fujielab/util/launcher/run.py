@@ -33,19 +33,19 @@ class FadingSplashScreen(QSplashScreen):
         self.animation.setStartValue(1.0)
         self.animation.setEndValue(0.0)
         self.animation.setEasingCurve(QEasingCurve.Linear)  # よりスムーズなアニメーション
-        
+
         # コールバック前に事前準備を行う
         if callback:
             self.animation.valueChanged.connect(lambda v: QApplication.processEvents())  # アニメーション中もUIを更新
-            
+
             # アニメーション完了前（80%まで進んだ時点）で事前にコールバックを実行
             def early_callback(v):
                 if v <= 0.2 and not hasattr(self, '_callback_executed'):
                     self._callback_executed = True
                     callback()
-            
+
             self.animation.valueChanged.connect(early_callback)
-        
+
         self.animation.start(QPropertyAnimation.DeleteWhenStopped)  # 使い終わったらメモリを解放
         debug_print("[debug] スプラッシュスクリーンのフェードアウトを開始")
 
@@ -97,50 +97,48 @@ def ask_reset_dialog():
 def parse_arguments():
     """コマンドライン引数を解析します"""
     parser = argparse.ArgumentParser(description='Fujielab Utility Launcher')
-    parser.add_argument('-d', '--debug', action='store_true', 
+    parser.add_argument('-d', '--debug', action='store_true',
                         help='デバッグモードを有効にします。詳細なログメッセージが表示されます。')
     parser.add_argument('--reset-config', action='store_true',
                         help='設定ファイルを初期化します。既存の設定は上書きされます。')
     parser.add_argument('--version', action='store_true',
                         help='バージョン情報を表示して終了します。')
-    
+
     return parser.parse_args()
 
 def main():
     # コマンドライン引数の解析
     args = parse_arguments()
-    
+
     # デバッグモードの設定
     set_debug_mode(args.debug)
     if args.debug:
         debug_print("[debug] デバッグモードで起動しました")
-    
+
     # バージョン情報表示
     if args.version:
         print("Fujielab Utility Launcher v0.1.0")
-        return 0
-    
-    # 設定ファイルのリセットフラグ
+        return 0    # 設定ファイルのリセットフラグ
     reset_config = args.reset_config
-    
+
     app = QApplication(sys.argv)
-    
+
     # スプラッシュスクリーン表示開始時間を記録
     splash_start_time = time.time()
-    
+
     # スプラッシュスクリーンの表示
     splash_pix = QPixmap(os.path.join(os.path.dirname(__file__), 'resources', 'splash.png'))
     splash = FadingSplashScreen(splash_pix)
     splash.setAutoFillBackground(True)
     splash.show()
     app.processEvents()
-    
+
     # アプリケーションアイコンを設定 - すぐに開始して並行処理
     try:
         # まず.icoファイルを優先して試す（Windowsでより適切）
         ico_path = os.path.join(os.path.dirname(__file__), 'resources', 'icon.ico')
         png_path = os.path.join(os.path.dirname(__file__), 'resources', 'icon.png')
-        
+
         if os.path.exists(ico_path):
             app.setWindowIcon(QIcon(ico_path))
             debug_print(f"[debug] アイコンを設定しました: {ico_path}")
@@ -151,7 +149,7 @@ def main():
             debug_print("[debug] アイコンファイルが見つかりません")
     except Exception as e:
         debug_print(f"[debug] アイコン設定エラー: {e}")
-    
+
     # 1秒間スプラッシュスクリーンを表示中にメインウィンドウの初期化を行う
     config_path = ensure_config(reset=reset_config, ask_dialog=ask_reset_dialog if reset_config else None)
     debug_print("[debug] メインウィンドウの事前初期化を開始")
@@ -160,23 +158,23 @@ def main():
     win.hide()
     app.processEvents()  # UIイベントを処理してレスポンシブさを維持
     debug_print("[debug] メインウィンドウの初期化完了")
-    
+
     # 残りのスプラッシュスクリーン表示時間を計算（最低1秒間は表示）
     elapsed_time = time.time() - splash_start_time
     remaining_time = max(0, 1.0 - elapsed_time)
     debug_print(f"[debug] 経過時間: {elapsed_time:.2f}秒、残り時間: {remaining_time:.2f}秒")
     if remaining_time > 0:
         time.sleep(remaining_time)
-    
+
     # スプラッシュスクリーンをフェードアウトさせてから、メインウィンドウを表示する
     def show_main_window():
         win.show()
         splash.hide()  # finish()より高速
         debug_print("[debug] スプラッシュスクリーン終了後にメインウィンドウを表示")
-    
+
     # フェードアウト開始（短くして200ミリ秒に）
     splash.fadeOut(200, show_main_window)
-    
+
     return app.exec_()
 
 if __name__ == '__main__':
