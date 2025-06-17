@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QMenuBar, QAction, QSizePolicy, QMdiArea, QFileDialog, QMessageBox, QToolBar, QMenu
+from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QMenuBar, QAction, QSizePolicy, QMdiArea, QFileDialog, QMessageBox, QToolBar, QMenu, QToolButton
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtCore import Qt, QPoint, QRect
 from .sticky_mdi import StickyMdiSubWindow
@@ -10,6 +10,7 @@ import platform
 from PyQt5.QtWidgets import QApplication
 from pathlib import Path
 import math
+import sys
 
 class CustomMdiArea(QMdiArea):
     """
@@ -131,20 +132,28 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # QMenuBarの代わりにQToolBarを使用してメニューを作成
-        # ツールバーは折りたたまれることがないので、常に展開したメニューが表示される
-        self.tool_bar = QToolBar("メインメニュー", self)
-        self.tool_bar.setMovable(False)  # 移動できないように設定
-        self.tool_bar.setFloatable(False)  # フロート不可
-        self.tool_bar.setContextMenuPolicy(Qt.PreventContextMenu)  # コンテキストメニューを無効化
-        self.tool_bar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.tool_bar.setMinimumHeight(32)  # 十分な高さを確保
+        # MacOSの場合は標準メニューバーを使用、その他のOSではツールバーを使用
+        self.is_macos = platform.system() == "Darwin"
 
-        # 標準メニューバーも保持するが非表示
-        self.menu_bar = QMenuBar(self)
-        self.menu_bar.hide()  # メニューバーを非表示
+        # 先にメニューバーを初期化（両方の環境で必要）
+        self.menu_bar = self.menuBar()
 
-        layout.addWidget(self.tool_bar, stretch=0)
+        if self.is_macos:
+            # MacOSではグローバルメニューバーを使用
+            self.tool_bar = None
+        else:
+            # MacOS以外ではカスタムツールバーを使用してメニューを作成
+            self.tool_bar = QToolBar("メインメニュー", self)
+            self.tool_bar.setMovable(False)  # 移動できないように設定
+            self.tool_bar.setFloatable(False)  # フロート不可
+            self.tool_bar.setContextMenuPolicy(Qt.PreventContextMenu)  # コンテキストメニューを無効化
+            self.tool_bar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.tool_bar.setMinimumHeight(28)  # メニューの高さを調整
+            layout.addWidget(self.tool_bar, stretch=0)
+
+            # 標準メニューバーは非表示（ツールバーを使うため）
+            if not self.is_macos:
+                self.menu_bar.hide()  # メニューバーを非表示
         self.mdi = CustomMdiArea()
         layout.addWidget(self.mdi, stretch=1)
         self.initMenu()
@@ -168,7 +177,8 @@ class MainWindow(QMainWindow):
 
     def initMenu(self):
         # ツールバーとメニューバーをクリア
-        self.tool_bar.clear()
+        if not self.is_macos and self.tool_bar:
+            self.tool_bar.clear()
         self.menu_bar.clear()
 
         # ===== ファイルメニュー =====
@@ -208,10 +218,11 @@ class MainWindow(QMainWindow):
         exitAct.triggered.connect(self.close)
         fileMenu.addAction(exitAct)
 
-        # ファイルメニューをツールバーに追加
-        fileMenuAction = QAction('ファイル', self)
-        fileMenuAction.setMenu(fileMenu)
-        self.tool_bar.addAction(fileMenuAction)
+        # MacOS以外の場合のみ、ツールバーにメニューアクションを追加
+        if not self.is_macos:
+            fileMenuAction = QAction('ファイル', self)
+            fileMenuAction.setMenu(fileMenu)
+            self.addMenuActionToToolbar(fileMenuAction)
 
         # ===== 整列メニュー =====
         arrangeMenu = QMenu('整列', self)
@@ -226,10 +237,11 @@ class MainWindow(QMainWindow):
         cascadeAct.triggered.connect(self.mdi.cascadeSubWindows)
         arrangeMenu.addAction(cascadeAct)
 
-        # 整列メニューをツールバーに追加
-        arrangeMenuAction = QAction('整列', self)
-        arrangeMenuAction.setMenu(arrangeMenu)
-        self.tool_bar.addAction(arrangeMenuAction)
+        # MacOS以外の場合のみ、ツールバーにメニューアクションを追加
+        if not self.is_macos:
+            arrangeMenuAction = QAction('整列', self)
+            arrangeMenuAction.setMenu(arrangeMenu)
+            self.addMenuActionToToolbar(arrangeMenuAction)
 
         # ===== 設定メニュー =====
         settingsMenu = QMenu('設定', self)
@@ -240,12 +252,13 @@ class MainWindow(QMainWindow):
         settingsAct.triggered.connect(self.openSettingsDialog)
         settingsMenu.addAction(settingsAct)
 
-        # 設定メニューをツールバーに追加
-        settingsMenuAction = QAction('設定', self)
-        settingsMenuAction.setMenu(settingsMenu)
-        self.tool_bar.addAction(settingsMenuAction)
+        # MacOS以外の場合のみ、ツールバーにメニューアクションを追加
+        if not self.is_macos:
+            settingsMenuAction = QAction('設定', self)
+            settingsMenuAction.setMenu(settingsMenu)
+            self.addMenuActionToToolbar(settingsMenuAction)
 
-        # メニューバーにも同じメニューを追加（ショートカットキー用）
+        # メニューバーにメニューを追加
         self.menu_bar.addMenu(fileMenu)
         self.menu_bar.addMenu(arrangeMenu)
         self.menu_bar.addMenu(settingsMenu)        # ツールバーとメニューのスタイル設定
@@ -253,19 +266,28 @@ class MainWindow(QMainWindow):
         QToolBar {
             background: #ffffff;
             border-bottom: 1px solid #b0b0b0;
-            spacing: 5px;
-            padding: 2px 10px;
+            spacing: 8px; /* 項目間のスペースを増加 */
+            padding: 0px 8px;
+            height: 28px;
         }
         QToolBar QToolButton {
             background: transparent;
             color: #222;
             font-size: 14px;
             font-weight: bold;
-            padding: 4px 10px;
-            margin: 0 3px;
+            padding: 2px 12px; /* 左右のパディングを増やして文字が切れないように */
+            margin: 0 2px; /* マージンも少し増やす */
             border-radius: 4px;
-            min-width: 80px;
+            width: auto;
+            min-width: 60px; /* 最小幅を設定して文字が切れないようにする */
             font-family: "Meiryo", "MS PGothic", sans-serif;
+        }
+        QToolBar QToolButton::menu-indicator {
+            width: 0px;  /* インジケーターを非表示にする */
+            height: 0px;
+            image: none; /* 画像を削除 */
+            subcontrol-position: right center;
+            subcontrol-origin: padding;
         }
         QToolBar QToolButton:hover {
             background: #e6e6e6;
@@ -281,7 +303,7 @@ class MainWindow(QMainWindow):
             font-family: "Meiryo", "MS PGothic", sans-serif;
         }
         QMenu::item {
-            padding: 6px 24px 6px 16px;
+            padding: 4px 20px 4px 12px;
             border-radius: 4px;
         }
         QMenu::item:selected {
@@ -474,13 +496,15 @@ class MainWindow(QMainWindow):
     def resizeEvent(self, event):
         super().resizeEvent(event)
 
-        # ツールバーのサイズをウィンドウに合わせる
-        self.tool_bar.setMinimumWidth(self.width())
-        self.tool_bar.setMaximumWidth(self.width())
+        if not self.is_macos and self.tool_bar:
+            # ツールバーのサイズをウィンドウに合わせる
+            self.tool_bar.setMinimumWidth(self.width())
+            self.tool_bar.setMaximumWidth(self.width())
 
-        # メニューバー（非表示だが、ショートカットのために必要）も調整
-        self.menu_bar.setMinimumWidth(self.width())
-        self.menu_bar.setMaximumWidth(self.width())
+        # メニューバーのサイズも調整（MacOSでは自動的に処理される）
+        if not self.is_macos:
+            self.menu_bar.setMinimumWidth(self.width())
+            self.menu_bar.setMaximumWidth(self.width())
 
         self.saveAllLaunchers()
 
@@ -589,3 +613,45 @@ class MainWindow(QMainWindow):
 
         debug_print("[debug] ======== MainWindow closeEvent: 終了処理完了 ========")
         event.accept()
+
+    def showMenuFromAction(self, action):
+        """メニュー項目がクリックされたときにメニューを表示するヘルパーメソッド"""
+        # MacOSでは不要（標準メニューバーが処理する）
+        if self.is_macos or not self.tool_bar:
+            return
+
+        if action.menu():
+            # アクションのボタンの位置と大きさを取得
+            button = None
+            for widget in self.tool_bar.children():
+                if isinstance(widget, QWidget) and hasattr(widget, 'actions') and widget.actions() and action in widget.actions():
+                    button = widget
+                    break
+
+            if button:
+                # ボタンの下にメニューを表示
+                pos = button.mapToGlobal(QPoint(0, button.height()))
+                action.menu().popup(pos)
+
+    def addMenuActionToToolbar(self, action):
+        """メニューアクションをカスタマイズしてツールバーに追加する"""
+        # MacOSの場合は何もしない（標準メニューバーを使用するため）
+        if self.is_macos or not self.tool_bar:
+            return
+
+        # 専用のツールボタンを作成
+        button = QToolButton(self.tool_bar)
+        button.setText(action.text())
+        button.setPopupMode(QToolButton.InstantPopup)  # クリックでメニューを即時表示
+        button.setMenu(action.menu())
+        button.setToolButtonStyle(Qt.ToolButtonTextOnly)
+        button.setAutoRaise(True)  # フラットなスタイル
+
+        # メニューインジケーター（"^"記号）を非表示にする
+        button.setStyleSheet("QToolButton::menu-indicator { width: 0; height: 0; image: none; }")
+
+        # ボタンのサイズポリシーを設定
+        textWidth = button.fontMetrics().boundingRect(button.text()).width()
+        button.setMinimumWidth(max(60, textWidth + 12))  # 文字幅+余白（インジケーター無しなので余白減少）
+
+        self.tool_bar.addWidget(button)
