@@ -21,90 +21,102 @@ class StickyMdiSubWindow(QMdiSubWindow):
                 self._resize_dir = resize_dir
                 self._resize_start_rect = self.geometry()
                 self._drag_start_pos = event.globalPos()
-                self._resize_adjacent_all = self.findAllAdjacentWindows(resize_dir)
+                # Find windows that should move with this edge
+                self._resize_adjacent_all = self.findAdjacentWindows(resize_dir)
             else:
                 self._dragging = True
                 self._drag_start_pos = event.globalPos() - self.frameGeometry().topLeft()
         super().mousePressEvent(event)
 
-    def findAllAdjacentWindows(self, resize_dir):
+    def findAdjacentWindows(self, resize_dir):
+        """Return windows that share the same boundary line.
+
+        The search propagates only along the moving edge so that windows
+        connected via a common border move together without affecting distant
+        ones.
+        """
         mdi_area = self.getMdiArea()
         if mdi_area is None:
             return []
-        checked = set()
+
+        directions = []
+        if 'left' in resize_dir:
+            directions.append('left')
+        if 'right' in resize_dir:
+            directions.append('right')
+        if 'top' in resize_dir:
+            directions.append('top')
+        if 'bottom' in resize_dir:
+            directions.append('bottom')
+
+        def collect(start_dir):
+            visited = {(self, start_dir)}
+            queue = [(self, start_dir)]
+            found = []
+            while queue:
+                win, cur_dir = queue.pop(0)
+                rect = win.geometry()
+                if cur_dir == 'left':
+                    coord = rect.left()
+                    for other in mdi_area.subWindowList():
+                        if other is win:
+                            continue
+                        o_rect = other.geometry()
+                        if abs(coord - o_rect.right()) < STICKY_DIST and \
+                           rect.top() < o_rect.bottom() and rect.bottom() > o_rect.top():
+                            pair = (other, 'right')
+                            if pair not in visited:
+                                visited.add(pair)
+                                queue.append(pair)
+                                found.append(pair)
+                elif cur_dir == 'right':
+                    coord = rect.right()
+                    for other in mdi_area.subWindowList():
+                        if other is win:
+                            continue
+                        o_rect = other.geometry()
+                        if abs(coord - o_rect.left()) < STICKY_DIST and \
+                           rect.top() < o_rect.bottom() and rect.bottom() > o_rect.top():
+                            pair = (other, 'left')
+                            if pair not in visited:
+                                visited.add(pair)
+                                queue.append(pair)
+                                found.append(pair)
+                elif cur_dir == 'top':
+                    coord = rect.top()
+                    for other in mdi_area.subWindowList():
+                        if other is win:
+                            continue
+                        o_rect = other.geometry()
+                        if abs(coord - o_rect.bottom()) < STICKY_DIST and \
+                           rect.left() < o_rect.right() and rect.right() > o_rect.left():
+                            pair = (other, 'bottom')
+                            if pair not in visited:
+                                visited.add(pair)
+                                queue.append(pair)
+                                found.append(pair)
+                elif cur_dir == 'bottom':
+                    coord = rect.bottom()
+                    for other in mdi_area.subWindowList():
+                        if other is win:
+                            continue
+                        o_rect = other.geometry()
+                        if abs(coord - o_rect.top()) < STICKY_DIST and \
+                           rect.left() < o_rect.right() and rect.right() > o_rect.left():
+                            pair = (other, 'top')
+                            if pair not in visited:
+                                visited.add(pair)
+                                queue.append(pair)
+                                found.append(pair)
+            return found
+
         result = []
-        def dfs(win, dir):
-            checked.add((win, dir))
-            my_rect = win.geometry()
-            for other in mdi_area.subWindowList():
-                if other is win:
-                    continue
-                other_rect = other.geometry()
-                if dir == 'left' and abs(my_rect.left() - other_rect.right()) < STICKY_DIST and \
-                   my_rect.top() < other_rect.bottom() and my_rect.bottom() > other_rect.top():
-                    if (other, 'right') not in checked:
-                        result.append((other, 'right'))
-                        dfs(other, dir)
-                if dir == 'right' and abs(my_rect.right() - other_rect.left()) < STICKY_DIST and \
-                   my_rect.top() < other_rect.bottom() and my_rect.bottom() > other_rect.top():
-                    if (other, 'left') not in checked:
-                        result.append((other, 'left'))
-                        dfs(other, dir)
-                if dir == 'top' and abs(my_rect.top() - other_rect.bottom()) < STICKY_DIST and \
-                   my_rect.left() < other_rect.right() and my_rect.right() > other_rect.left():
-                    if (other, 'bottom') not in checked:
-                        result.append((other, 'bottom'))
-                        dfs(other, dir)
-                if dir == 'bottom' and abs(my_rect.bottom() - other_rect.top()) < STICKY_DIST and \
-                   my_rect.left() < other_rect.right() and my_rect.right() > other_rect.left():
-                    if (other, 'top') not in checked:
-                        result.append((other, 'top'))
-                        dfs(other, dir)
-                if dir == 'left':
-                    if abs(my_rect.left() - other_rect.left()) < 2 and \
-                       my_rect.top() < other_rect.bottom() and my_rect.bottom() > other_rect.top():
-                        if (other, 'left') not in checked:
-                            result.append((other, 'left'))
-                            dfs(other, dir)
-                    if abs(my_rect.left() - other_rect.right()) < 2 and \
-                       my_rect.top() < other_rect.bottom() and my_rect.bottom() > other_rect.top():
-                        if (other, 'right') not in checked:
-                            result.append((other, 'right'))
-                            dfs(other, dir)
-                if dir == 'right':
-                    if abs(my_rect.right() - other_rect.right()) < 2 and \
-                       my_rect.top() < other_rect.bottom() and my_rect.bottom() > other_rect.top():
-                        if (other, 'right') not in checked:
-                            result.append((other, 'right'))
-                            dfs(other, dir)
-                    if abs(my_rect.right() - other_rect.left()) < 2 and \
-                       my_rect.top() < other_rect.bottom() and my_rect.bottom() > other_rect.top():
-                        if (other, 'left') not in checked:
-                            result.append((other, 'left'))
-                            dfs(other, dir)
-                if dir == 'top':
-                    if abs(my_rect.top() - other_rect.top()) < 2 and \
-                       my_rect.left() < other_rect.right() and my_rect.right() > other_rect.left():
-                        if (other, 'top') not in checked:
-                            result.append((other, 'top'))
-                            dfs(other, dir)
-                    if abs(my_rect.top() - other_rect.bottom()) < 2 and \
-                       my_rect.left() < other_rect.right() and my_rect.right() > other_rect.left():
-                        if (other, 'bottom') not in checked:
-                            result.append((other, 'bottom'))
-                            dfs(other, dir)
-                if dir == 'bottom':
-                    if abs(my_rect.bottom() - other_rect.bottom()) < 2 and \
-                       my_rect.left() < other_rect.right() and my_rect.right() > other_rect.left():
-                        if (other, 'bottom') not in checked:
-                            result.append((other, 'bottom'))
-                            dfs(other, dir)
-                    if abs(my_rect.bottom() - other_rect.top()) < 2 and \
-                       my_rect.left() < other_rect.right() and my_rect.right() > other_rect.left():
-                        if (other, 'top') not in checked:
-                            result.append((other, 'top'))
-                            dfs(other, dir)
-        dfs(self, resize_dir)
+        added = set()
+        for d in directions:
+            for pair in collect(d):
+                if pair not in added and pair[0] is not self:
+                    added.add(pair)
+                    result.append(pair)
         return result
 
     def mouseMoveEvent(self, event):
@@ -148,6 +160,7 @@ class StickyMdiSubWindow(QMdiSubWindow):
                 other_rect = win.geometry()
                 ominw = win.minimumWidth()
                 ominh = win.minimumHeight()
+                handled = True
                 if dir == 'right' and adj_dir == 'left':
                     new_left = self.mapToParent(event.pos()).x()
                     fixed_right = other_rect.right()
@@ -180,6 +193,40 @@ class StickyMdiSubWindow(QMdiSubWindow):
                         other_rect.setTop(fixed_top)
                         other_rect.setBottom(new_bottom)
                         win.setGeometry(other_rect)
+                elif dir == 'right' and adj_dir == 'right':
+                    new_right = self.mapToParent(event.pos()).x()
+                    fixed_left = other_rect.left()
+                    new_width = new_right - fixed_left
+                    if new_width >= ominw:
+                        other_rect.setRight(new_right)
+                        win.setGeometry(other_rect)
+                elif dir == 'left' and adj_dir == 'left':
+                    new_left = self.mapToParent(event.pos()).x()
+                    fixed_right = other_rect.right()
+                    new_width = fixed_right - new_left
+                    if new_width >= ominw:
+                        other_rect.setLeft(new_left)
+                        win.setGeometry(other_rect)
+                elif dir == 'bottom' and adj_dir == 'bottom':
+                    new_bottom = self.mapToParent(event.pos()).y()
+                    fixed_top = other_rect.top()
+                    new_height = new_bottom - fixed_top
+                    if new_height >= ominh:
+                        other_rect.setBottom(new_bottom)
+                        win.setGeometry(other_rect)
+                elif dir == 'top' and adj_dir == 'top':
+                    new_top = self.mapToParent(event.pos()).y()
+                    fixed_bottom = other_rect.bottom()
+                    new_height = fixed_bottom - new_top
+                    if new_height >= ominh:
+                        other_rect.setTop(new_top)
+                        win.setGeometry(other_rect)
+                else:
+                    handled = False
+                if not handled:
+                    debug_print(
+                        f"[debug] 隣接しているが変化しないウィンドウ: {win.windowTitle()}"
+                    )
             self.setGeometry(new_geom)
         else:
             super().mouseMoveEvent(event)
