@@ -47,6 +47,7 @@ This is useful for switching between different configuration profiles or importi
 
 - Multiple program launcher with configurable settings
 - Support for Python scripts and shell commands
+- Ability to specify custom script arguments in the Python launcher
 - Customizable workspace directory settings
 - Cross-platform support (Windows, macOS, Linux)
 
