@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import QApplication
 from pathlib import Path
 import math
 import sys
+import os
 
 class CustomMdiArea(QMdiArea):
     """
@@ -371,6 +372,23 @@ class MainWindow(QMainWindow):
             if reply == QMessageBox.Yes:
                 import sys, os
                 os.execv(sys.executable, [sys.executable] + sys.argv)
+
+    def importConfigFromFile(self, path):
+        """
+        指定されたファイルから設定をインポートする
+        Args:
+            path: インポートする設定ファイルのパス
+        """
+        if path and os.path.exists(path):
+            try:
+                self.config_manager.import_config(path)
+                debug_print(f"[debug] 設定ファイルをインポートしました: {path}")
+                # 設定が変更されたので再起動せずに設定を即時反映
+                self._suppress_save = True
+                self.restoreAllLaunchers()
+                self._suppress_save = False
+            except Exception as e:
+                error_print(f"[error] 設定ファイルのインポートに失敗しました: {e}")
 
     def exportConfig(self):
         path, _ = QFileDialog.getSaveFileName(self, "設定ファイルのエクスポート", filter="YAML Files (*.yaml *.yml)")

@@ -6,12 +6,8 @@ Multiple Program Launcher Utility
 
 ## Usage
 
-### Command Line Arguments
+### How to Run
 
-```
-python -m fujielab.util.launcher.run [options]
-```
-or
 ```
 fujielab-launcher [options]
 ```
@@ -19,7 +15,8 @@ fujielab-launcher [options]
 #### Options
 
 - `-d`, `--debug`: Enable debug mode. Detailed log messages will be displayed.
-- `--reset-config`: Initialize the YAML configuration file (`config.yaml`). Existing settings will be overwritten.
+- `-r`, `--reset-config`: Initialize the launcher to start with no saved settings from the previous session.
+- `-c`, `--config`: Start with settings imported from a previously exported configuration file.
 - `--version`: Display version information and exit.
 - `-h`, `--help`: Display help message and exit.
 
@@ -33,14 +30,18 @@ This is useful for development and troubleshooting. It is not necessary for norm
 
 ```bash
 # Start in debug mode
-python -m fujielab.util.launcher.run -d
+fujielab-launcher -d
 ```
 
-or
+### Using Custom Configuration File
+
+You can start with previously exported settings by using the `-c` or `--config` option.
 
 ```bash
-python -m fujielab.util.launcher.run --debug
+fujielab-launcher --config /path/to/your/custom_config.yaml
 ```
+
+This is useful for switching between different configuration profiles or importing settings from another system.
 
 ## Features
 

@@ -99,8 +99,10 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='Fujielab Utility Launcher')
     parser.add_argument('-d', '--debug', action='store_true',
                         help='デバッグモードを有効にします。詳細なログメッセージが表示されます。')
-    parser.add_argument('--reset-config', action='store_true',
+    parser.add_argument('-r', '--reset-config', action='store_true',
                         help='設定ファイルを初期化します。既存の設定は上書きされます。')
+    parser.add_argument('-c', '--config', type=str, default=None,
+                        help='起動時に読み込む設定ファイルのパスを指定します。')
     parser.add_argument('--version', action='store_true',
                         help='バージョン情報を表示して終了します。')
 
@@ -118,8 +120,15 @@ def main():
     # バージョン情報表示
     if args.version:
         print("Fujielab Utility Launcher v0.1.0")
-        return 0    # 設定ファイルのリセットフラグ
-    reset_config = args.reset_config
+        return 0
+        
+    # 設定ファイルのリセットフラグ
+    # -cオプションが指定されている場合は、常に設定をリセットする
+    reset_config = args.reset_config or (args.config is not None)
+
+    # コマンドラインで指定された設定ファイルパス
+    config_import_path = args.config
+
 
     app = QApplication(sys.argv)
 
@@ -151,7 +160,12 @@ def main():
         debug_print(f"[debug] アイコン設定エラー: {e}")
 
     # 1秒間スプラッシュスクリーンを表示中にメインウィンドウの初期化を行う
-    config_path = ensure_config(reset=reset_config, ask_dialog=ask_reset_dialog if reset_config else None)
+    # -cオプションが指定された場合は確認なしで強制的にリセット
+    if config_import_path:
+        config_path = ensure_config(reset=True, ask_dialog=None)  # 強制リセット
+        debug_print("[debug] 設定ファイルをインポートするため、既存設定を強制リセットしました")
+    else:
+        config_path = ensure_config(reset=reset_config, ask_dialog=ask_reset_dialog if reset_config else None)
     debug_print("[debug] メインウィンドウの事前初期化を開始")
     win = MainWindow()
     # メインウィンドウを非表示で準備する（初期化処理やリソース読み込みを完了させる）
@@ -168,6 +182,11 @@ def main():
 
     # スプラッシュスクリーンをフェードアウトさせてから、メインウィンドウを表示する
     def show_main_window():
+        # コマンドラインで設定ファイルが指定されていれば、それをインポートする
+        if config_import_path and os.path.exists(config_import_path):
+            debug_print(f"[debug] コマンドラインで指定された設定ファイルをインポートします: {config_import_path}")
+            win.importConfigFromFile(config_import_path)
+        
         win.show()
         splash.hide()  # finish()より高速
         debug_print("[debug] スプラッシュスクリーン終了後にメインウィンドウを表示")

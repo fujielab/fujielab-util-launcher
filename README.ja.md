@@ -6,12 +6,8 @@ Multiple Program Launcher Utility
 
 ## 使用方法
 
-### コマンドライン引数
+### 実行方法
 
-```
-python -m fujielab.util.launcher.run [オプション]
-```
-または
 ```
 fujielab-launcher [オプション]
 ```
@@ -19,7 +15,8 @@ fujielab-launcher [オプション]
 #### オプション
 
 - `-d`, `--debug`: デバッグモードを有効にします。詳細なログメッセージが表示されます。
-- `--reset-config`: YAML形式の設定ファイル(`config.yaml`)を初期化します。既存の設定は上書きされます。
+- `-r`, `--reset-config`: 前回利用時に自動的に保存された設定を初期化してランチャのない状態から開始します。
+- `-c`, `--config`: 過去にエクスポートされた設定ファイルをインポートした状態で起動します。
 - `--version`: バージョン情報を表示して終了します。
 - `-h`, `--help`: ヘルプメッセージを表示して終了します。
 
@@ -33,14 +30,18 @@ fujielab-launcher [オプション]
 
 ```bash
 # デバッグモードで起動
-python -m fujielab.util.launcher.run -d
+fujielab-launcher  -d
 ```
 
-または
+### カスタム設定ファイルの使用
+
+過去にエクスポートした設定ファイルの状態で起動するには、`-c`または`--config`オプションを使用します。
 
 ```bash
-python -m fujielab.util.launcher.run --debug
+fujielab-launcher --config /path/to/your/custom_config.yaml
 ```
+
+これは異なる設定プロファイル間を切り替えたり、別のシステムから設定をインポートする場合に便利です。
 
 ## 機能
 
