@@ -21,90 +21,69 @@ class StickyMdiSubWindow(QMdiSubWindow):
                 self._resize_dir = resize_dir
                 self._resize_start_rect = self.geometry()
                 self._drag_start_pos = event.globalPos()
-                self._resize_adjacent_all = self.findAllAdjacentWindows(resize_dir)
+                # Only link directly adjacent windows to avoid cascading resize
+                self._resize_adjacent_all = self.findAdjacentWindows(resize_dir)
             else:
                 self._dragging = True
                 self._drag_start_pos = event.globalPos() - self.frameGeometry().topLeft()
         super().mousePressEvent(event)
 
-    def findAllAdjacentWindows(self, resize_dir):
+    def findAdjacentWindows(self, resize_dir):
+        """Return windows directly adjacent in the resize direction."""
         mdi_area = self.getMdiArea()
         if mdi_area is None:
             return []
-        checked = set()
+
         result = []
-        def dfs(win, dir):
-            checked.add((win, dir))
-            my_rect = win.geometry()
-            for other in mdi_area.subWindowList():
-                if other is win:
-                    continue
-                other_rect = other.geometry()
-                if dir == 'left' and abs(my_rect.left() - other_rect.right()) < STICKY_DIST and \
+        my_rect = self.geometry()
+
+        for other in mdi_area.subWindowList():
+            if other is self:
+                continue
+            other_rect = other.geometry()
+
+            if resize_dir == 'left' and abs(my_rect.left() - other_rect.right()) < STICKY_DIST and \
+               my_rect.top() < other_rect.bottom() and my_rect.bottom() > other_rect.top():
+                result.append((other, 'right'))
+            if resize_dir == 'right' and abs(my_rect.right() - other_rect.left()) < STICKY_DIST and \
+               my_rect.top() < other_rect.bottom() and my_rect.bottom() > other_rect.top():
+                result.append((other, 'left'))
+            if resize_dir == 'top' and abs(my_rect.top() - other_rect.bottom()) < STICKY_DIST and \
+               my_rect.left() < other_rect.right() and my_rect.right() > other_rect.left():
+                result.append((other, 'bottom'))
+            if resize_dir == 'bottom' and abs(my_rect.bottom() - other_rect.top()) < STICKY_DIST and \
+               my_rect.left() < other_rect.right() and my_rect.right() > other_rect.left():
+                result.append((other, 'top'))
+
+            if resize_dir == 'left':
+                if abs(my_rect.left() - other_rect.left()) < 2 and \
                    my_rect.top() < other_rect.bottom() and my_rect.bottom() > other_rect.top():
-                    if (other, 'right') not in checked:
-                        result.append((other, 'right'))
-                        dfs(other, dir)
-                if dir == 'right' and abs(my_rect.right() - other_rect.left()) < STICKY_DIST and \
+                    result.append((other, 'left'))
+                if abs(my_rect.left() - other_rect.right()) < 2 and \
                    my_rect.top() < other_rect.bottom() and my_rect.bottom() > other_rect.top():
-                    if (other, 'left') not in checked:
-                        result.append((other, 'left'))
-                        dfs(other, dir)
-                if dir == 'top' and abs(my_rect.top() - other_rect.bottom()) < STICKY_DIST and \
+                    result.append((other, 'right'))
+            if resize_dir == 'right':
+                if abs(my_rect.right() - other_rect.right()) < 2 and \
+                   my_rect.top() < other_rect.bottom() and my_rect.bottom() > other_rect.top():
+                    result.append((other, 'right'))
+                if abs(my_rect.right() - other_rect.left()) < 2 and \
+                   my_rect.top() < other_rect.bottom() and my_rect.bottom() > other_rect.top():
+                    result.append((other, 'left'))
+            if resize_dir == 'top':
+                if abs(my_rect.top() - other_rect.top()) < 2 and \
                    my_rect.left() < other_rect.right() and my_rect.right() > other_rect.left():
-                    if (other, 'bottom') not in checked:
-                        result.append((other, 'bottom'))
-                        dfs(other, dir)
-                if dir == 'bottom' and abs(my_rect.bottom() - other_rect.top()) < STICKY_DIST and \
+                    result.append((other, 'top'))
+                if abs(my_rect.top() - other_rect.bottom()) < 2 and \
                    my_rect.left() < other_rect.right() and my_rect.right() > other_rect.left():
-                    if (other, 'top') not in checked:
-                        result.append((other, 'top'))
-                        dfs(other, dir)
-                if dir == 'left':
-                    if abs(my_rect.left() - other_rect.left()) < 2 and \
-                       my_rect.top() < other_rect.bottom() and my_rect.bottom() > other_rect.top():
-                        if (other, 'left') not in checked:
-                            result.append((other, 'left'))
-                            dfs(other, dir)
-                    if abs(my_rect.left() - other_rect.right()) < 2 and \
-                       my_rect.top() < other_rect.bottom() and my_rect.bottom() > other_rect.top():
-                        if (other, 'right') not in checked:
-                            result.append((other, 'right'))
-                            dfs(other, dir)
-                if dir == 'right':
-                    if abs(my_rect.right() - other_rect.right()) < 2 and \
-                       my_rect.top() < other_rect.bottom() and my_rect.bottom() > other_rect.top():
-                        if (other, 'right') not in checked:
-                            result.append((other, 'right'))
-                            dfs(other, dir)
-                    if abs(my_rect.right() - other_rect.left()) < 2 and \
-                       my_rect.top() < other_rect.bottom() and my_rect.bottom() > other_rect.top():
-                        if (other, 'left') not in checked:
-                            result.append((other, 'left'))
-                            dfs(other, dir)
-                if dir == 'top':
-                    if abs(my_rect.top() - other_rect.top()) < 2 and \
-                       my_rect.left() < other_rect.right() and my_rect.right() > other_rect.left():
-                        if (other, 'top') not in checked:
-                            result.append((other, 'top'))
-                            dfs(other, dir)
-                    if abs(my_rect.top() - other_rect.bottom()) < 2 and \
-                       my_rect.left() < other_rect.right() and my_rect.right() > other_rect.left():
-                        if (other, 'bottom') not in checked:
-                            result.append((other, 'bottom'))
-                            dfs(other, dir)
-                if dir == 'bottom':
-                    if abs(my_rect.bottom() - other_rect.bottom()) < 2 and \
-                       my_rect.left() < other_rect.right() and my_rect.right() > other_rect.left():
-                        if (other, 'bottom') not in checked:
-                            result.append((other, 'bottom'))
-                            dfs(other, dir)
-                    if abs(my_rect.bottom() - other_rect.top()) < 2 and \
-                       my_rect.left() < other_rect.right() and my_rect.right() > other_rect.left():
-                        if (other, 'top') not in checked:
-                            result.append((other, 'top'))
-                            dfs(other, dir)
-        dfs(self, resize_dir)
+                    result.append((other, 'bottom'))
+            if resize_dir == 'bottom':
+                if abs(my_rect.bottom() - other_rect.bottom()) < 2 and \
+                   my_rect.left() < other_rect.right() and my_rect.right() > other_rect.left():
+                    result.append((other, 'bottom'))
+                if abs(my_rect.bottom() - other_rect.top()) < 2 and \
+                   my_rect.left() < other_rect.right() and my_rect.right() > other_rect.left():
+                    result.append((other, 'top'))
+
         return result
 
     def mouseMoveEvent(self, event):
