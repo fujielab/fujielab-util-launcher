@@ -160,6 +160,7 @@ class StickyMdiSubWindow(QMdiSubWindow):
                 other_rect = win.geometry()
                 ominw = win.minimumWidth()
                 ominh = win.minimumHeight()
+                handled = True
                 if dir == 'right' and adj_dir == 'left':
                     new_left = self.mapToParent(event.pos()).x()
                     fixed_right = other_rect.right()
@@ -192,6 +193,40 @@ class StickyMdiSubWindow(QMdiSubWindow):
                         other_rect.setTop(fixed_top)
                         other_rect.setBottom(new_bottom)
                         win.setGeometry(other_rect)
+                elif dir == 'right' and adj_dir == 'right':
+                    new_right = self.mapToParent(event.pos()).x()
+                    fixed_left = other_rect.left()
+                    new_width = new_right - fixed_left
+                    if new_width >= ominw:
+                        other_rect.setRight(new_right)
+                        win.setGeometry(other_rect)
+                elif dir == 'left' and adj_dir == 'left':
+                    new_left = self.mapToParent(event.pos()).x()
+                    fixed_right = other_rect.right()
+                    new_width = fixed_right - new_left
+                    if new_width >= ominw:
+                        other_rect.setLeft(new_left)
+                        win.setGeometry(other_rect)
+                elif dir == 'bottom' and adj_dir == 'bottom':
+                    new_bottom = self.mapToParent(event.pos()).y()
+                    fixed_top = other_rect.top()
+                    new_height = new_bottom - fixed_top
+                    if new_height >= ominh:
+                        other_rect.setBottom(new_bottom)
+                        win.setGeometry(other_rect)
+                elif dir == 'top' and adj_dir == 'top':
+                    new_top = self.mapToParent(event.pos()).y()
+                    fixed_bottom = other_rect.bottom()
+                    new_height = fixed_bottom - new_top
+                    if new_height >= ominh:
+                        other_rect.setTop(new_top)
+                        win.setGeometry(other_rect)
+                else:
+                    handled = False
+                if not handled:
+                    debug_print(
+                        f"[debug] 隣接しているが変化しないウィンドウ: {win.windowTitle()}"
+                    )
             self.setGeometry(new_geom)
         else:
             super().mouseMoveEvent(event)
