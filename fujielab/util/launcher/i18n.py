@@ -26,6 +26,14 @@ _translations = {
     'en': {
     },
     'ja': {
+        # ショートカット作成関連の翻訳
+        'Create a shortcut on the Windows Desktop. Windows only.': 'Windowsデスクトップにショートカットを作成します。Windows専用。',
+        'Error: pywin32 package is required for creating shortcuts.': 'エラー: ショートカット作成には pywin32 パッケージが必要です。',
+        'Please install it using: pip install pywin32': 'pip install pywin32 でインストールしてください。',
+        'Error: Could not find the Desktop folder.': 'エラー: デスクトップフォルダが見つかりません。',
+        'Shortcut created successfully on the Desktop.': 'デスクトップにショートカットを作成しました。',
+        'Error creating shortcut:': 'ショートカット作成エラー:',
+        
         'File': 'ファイル',
         'New Python Launcher': '新規Pythonランチャー',
         'New Shell Launcher': '新規シェルランチャー',
