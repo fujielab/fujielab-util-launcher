@@ -1,6 +1,6 @@
 [project]
 name = "fujielab-util-launcher"
-version = "0.1.0"
+version = "0.2.0"
 description = "Fujielab Utility Launcher GUI"
 authors = [
     { name = "Shinya Fujie", email = "shinya.fujie@p.chibakoudai.jp"}

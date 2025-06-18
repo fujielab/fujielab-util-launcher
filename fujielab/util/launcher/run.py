@@ -123,7 +123,7 @@ def parse_arguments():
                         help=tr('Specify the path of the settings file to load at startup.'))
     parser.add_argument('--version', action='store_true',
                         help=tr('Display version information and exit.'))
-    
+
     # Windows限定オプション
     if platform.system() == "Windows":
         parser.add_argument('--create-shortcut', action='store_true',
@@ -146,14 +146,14 @@ def main():
 
     # バージョン情報表示
     if args.version:
-        print("Fujielab Utility Launcher v0.1.0")
+        print("Fujielab Utility Launcher v0.2.0")
         return 0
-        
+
     # Windows専用: デスクトップにショートカットを作成
     if platform.system() == "Windows" and hasattr(args, 'create_shortcut') and args.create_shortcut:
         success = create_windows_shortcut()
         return 0 if success else 1
-        
+
     # Windows専用: デスクトップにショートカットを作成
     if platform.system() == "Windows" and hasattr(args, 'create_shortcut') and args.create_shortcut:
         success = create_windows_shortcut()
@@ -223,7 +223,7 @@ def main():
         if config_import_path and os.path.exists(config_import_path):
             debug_print(f"[debug] Importing configuration file from command line: {config_import_path}")
             win.importConfigFromFile(config_import_path)
-        
+
         win.show()
         splash.hide()  # finish()より高速
         debug_print("[debug] Showing main window after splash screen")
