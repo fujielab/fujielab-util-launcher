@@ -104,8 +104,8 @@ def parse_arguments():
     """Parse command line arguments with language support."""
     # Pre-parse only --lang to determine language for help messages
     pre = argparse.ArgumentParser(add_help=False)
-    pre.add_argument('--lang', choices=['en', 'ja'], default=None,
-                    help=tr('Language for UI (en or ja). If omitted, system locale is used.'))
+    pre.add_argument('--lang', choices=['en', 'ja', 'de'], default=None,
+                    help=tr('Language for UI (en, ja or de). If omitted, system locale is used.'))
     known, remaining = pre.parse_known_args()
 
     # Set language early so translation works for help strings

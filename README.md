@@ -18,7 +18,7 @@ fujielab-launcher [options]
 - `-r`, `--reset-config`: Initialize the launcher to start with no saved settings from the previous session.
 - `-c`, `--config`: Start with settings imported from a previously exported configuration file.
 - `--version`: Display version information and exit.
-- `--lang`: Select UI language (`en` or `ja`). If omitted, the system locale is
+- `--lang`: Select UI language (`en`, `ja`, or `de`). If omitted, the system locale is
   used.
 - `--create-shortcut`: (Windows only) Create a shortcut on the Desktop for easy access.
 - `-h`, `--help`: Display help message and exit.
