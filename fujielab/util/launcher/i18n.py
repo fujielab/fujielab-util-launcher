@@ -1,5 +1,6 @@
 import os
 import locale
+from .debug_util import debug_print
 
 
 def _detect_language():
@@ -7,19 +8,23 @@ def _detect_language():
     # First, check explicit environment override
     env_lang = os.environ.get('FUJIELAB_LANG')
     if env_lang:
+        debug_print(f"[debug] Language set from environment variable FUJIELAB_LANG: {env_lang}")
         return env_lang
     # locale.getdefaultlocale relies on gettext environment variables such as
     # LANG or LC_MESSAGES.
     lang, _ = locale.getdefaultlocale()
     if isinstance(lang, str) and lang.lower().startswith('ja'):
+        debug_print(f"[debug] Detected Japanese locale: {lang}")
         return 'ja'
+    debug_print(f"[debug] Using default English (detected locale: {lang})")
     return 'en'
 
 
 LANG = _detect_language()
 
 _translations = {
-    'en': {},
+    'en': {
+    },
     'ja': {
         'File': 'ファイル',
         'New Python Launcher': '新規Pythonランチャー',
@@ -80,10 +85,15 @@ def set_language(lang=None):
     """
     global LANG
     if lang:
+        debug_print(f"[debug] Setting language to: {lang}")
         LANG = lang
     else:
         LANG = _detect_language()
+    debug_print(f"[debug] Current language set to: {LANG}")
 
 
 def tr(text):
-    return _translations.get(LANG, {}).get(text, text)
+    translated = _translations.get(LANG, {}).get(text, text)
+    # if translated != text and LANG == 'ja':  # Only log actual translations for Japanese
+    #     print(f"Translated: '{text}' -> '{translated}'")
+    return translated

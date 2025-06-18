@@ -2,7 +2,7 @@ import os
 import sys
 
 from .config_manager import LauncherConfigManager
-from .i18n import set_language, tr
+from .i18n import set_language, tr, LANG
 import time
 import argparse
 from pathlib import Path
@@ -99,7 +99,8 @@ def parse_arguments():
     """Parse command line arguments with language support."""
     # Pre-parse only --lang to determine language for help messages
     pre = argparse.ArgumentParser(add_help=False)
-    pre.add_argument('--lang', choices=['en', 'ja'], default=None)
+    pre.add_argument('--lang', choices=['en', 'ja'], default=None,
+                    help=tr('Language for UI (en or ja). If omitted, system locale is used.'))
     known, remaining = pre.parse_known_args()
 
     # Set language early so translation works for help strings
@@ -117,19 +118,16 @@ def parse_arguments():
                         help=tr('Specify the path of the settings file to load at startup.'))
     parser.add_argument('--version', action='store_true',
                         help=tr('Display version information and exit.'))
-    parser.add_argument(
-        '--lang', choices=['en', 'ja'], default=known.lang,
-        help=tr('Language for UI (en or ja). If omitted, system locale is used.')
-    )
 
-    return parser.parse_args(remaining)
+    return parser.parse_args(remaining), known.lang
 
 def main():
     # コマンドライン引数の解析
-    args = parse_arguments()
+    args, lang = parse_arguments()
 
     # UI language
-    set_language(args.lang)
+    set_language(lang)
+    debug_print(f"[debug] UI language set to: {lang if lang else 'system default'}")
 
     # デバッグモードの設定
     set_debug_mode(args.debug)
@@ -140,7 +138,7 @@ def main():
     if args.version:
         print("Fujielab Utility Launcher v0.1.0")
         return 0
-        
+
     # 設定ファイルのリセットフラグ
     # -cオプションが指定されている場合は、常に設定をリセットする
     reset_config = args.reset_config or (args.config is not None)

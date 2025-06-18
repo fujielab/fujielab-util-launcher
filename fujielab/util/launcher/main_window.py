@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QMenuBar, QAction, QSizePolicy, QMdiArea, QFileDialog, QMessageBox, QToolBar, QMenu, QToolButton
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtCore import Qt, QPoint, QRect
-from .i18n import tr
+from .i18n import tr, set_language, LANG
 from .sticky_mdi import StickyMdiSubWindow
 from .script_runner import ScriptRunnerWidget
 from .shell_runner import ShellRunnerWidget
@@ -127,6 +127,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         debug_print("[debug] ======== MainWindow initialization start ========")
+        debug_print(f"[debug] Current UI language: {LANG}")
         self.setWindowTitle('FUJIE Lab. Program Launcher')
         central = QWidget()
         self.setCentralWidget(central)
