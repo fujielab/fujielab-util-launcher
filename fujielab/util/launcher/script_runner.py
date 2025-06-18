@@ -5,6 +5,7 @@ import subprocess
 import json
 from pathlib import Path
 from .debug_util import debug_print, error_print
+from .i18n import tr
 
 interpreter_cache = {}
 
@@ -23,17 +24,17 @@ class ScriptRunnerWidget(QWidget):
         self.output_view.setReadOnly(True)
         fixed_font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
         self.output_view.setFont(fixed_font)
-        self.interpreter_label = QLabel("インタプリタ:")
-        self.script_label = QLabel("スクリプト:")
-        self.dir_label = QLabel("作業ディレクトリ:")
+        self.interpreter_label = QLabel(tr("Interpreter:"))
+        self.script_label = QLabel(tr("Script:"))
+        self.dir_label = QLabel(tr("Working Directory:"))
         # --- UI部品をComboBox/ボタン付きに変更 ---
         self.interpreter_combo = QComboBox()
         self.script_value = QLineEdit()
         self.script_value.setReadOnly(True)
-        self.script_select_button = QPushButton("選択")
+        self.script_select_button = QPushButton(tr("Select"))
         self.dir_value = QLineEdit()
         self.dir_value.setReadOnly(True)
-        self.dir_select_button = QPushButton("選択")
+        self.dir_select_button = QPushButton(tr("Select"))
         # インタプリタリストをセット
         interp_map = self.get_interpreters()
         self.interpreter_map = interp_map
@@ -43,8 +44,8 @@ class ScriptRunnerWidget(QWidget):
             lineedit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         for label in [self.interpreter_label, self.script_label, self.dir_label]:
             label.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
-        self.run_button = QPushButton("実行")
-        self.stop_button = QPushButton("停止")
+        self.run_button = QPushButton(tr("Run"))
+        self.stop_button = QPushButton(tr("Stop"))
         self.run_button.setFixedHeight(26)
         self.stop_button.setFixedHeight(26)
         self.script_select_button.setFixedSize(48, 24)
@@ -76,7 +77,7 @@ class ScriptRunnerWidget(QWidget):
         layout.addLayout(form_layout)
         layout.addWidget(self.output_view)
         self.input_line = QLineEdit()
-        self.input_line.setPlaceholderText("標準入力をここに入力しEnterで送信")
+        self.input_line.setPlaceholderText(tr("Enter stdin here and press Enter"))
         self.input_line.setFixedHeight(22)
         self.input_line.setFont(fixed_font)
         self.input_line.returnPressed.connect(self.send_stdin)
@@ -148,7 +149,7 @@ class ScriptRunnerWidget(QWidget):
             label = f"Python {sys_version} (system)"
             interpreters[label] = sys_path
         except Exception as e:
-            error_print(f"[warn] system pythonの取得に失敗しました: {e}")
+            error_print(f"[warn] Failed to get system Python: {e}")
         try:
             output = subprocess.check_output(["conda", "info", "--json"], universal_newlines=True)
             info = json.loads(output)
@@ -168,7 +169,7 @@ class ScriptRunnerWidget(QWidget):
                 except Exception:
                     continue
         except Exception as e:
-            error_print(f"[warn] conda環境の取得に失敗しました: {e}")
+            error_print(f"[warn] Failed to get conda environments: {e}")
         interpreter_cache = interpreters
         return interpreters
 
@@ -193,11 +194,11 @@ class ScriptRunnerWidget(QWidget):
     def run_script(self, checked=False):
         self.output_view.append(f"[debug] run_script called (checked={checked})")
         if not self.script_path:
-            self.output_view.append("スクリプトが選択されていません")
+            self.output_view.append(tr("No script selected"))
             return
-        self.output_view.append(f"[debug] インタプリタ: {self.interpreter_path}")
-        self.output_view.append(f"[debug] スクリプト: {self.script_path}")
-        self.output_view.append(f"[debug] 作業ディレクトリ: {self.working_dir}")
+        self.output_view.append(f"[debug] Interpreter: {self.interpreter_path}")
+        self.output_view.append(f"[debug] Script: {self.script_path}")
+        self.output_view.append(f"[debug] Working directory: {self.working_dir}")
 
         # プロセス作成前に環境変数を設定
         self.process = QProcess(self)
@@ -238,7 +239,7 @@ class ScriptRunnerWidget(QWidget):
         self.stdout_buffer = ""
         self.stderr_buffer = ""
         self.output_view.clear()
-        self.output_view.append("スクリプトを開始します...")
+        self.output_view.append(tr("Starting script..."))
         self.process.start()
 
     def handle_process_error(self, error):
@@ -354,11 +355,11 @@ class ScriptRunnerWidget(QWidget):
             self.output_view.append(f"<span style='color:red;'>{self.stderr_buffer}</span>")
             self.stderr_buffer = ""
 
-        self.output_view.append("スクリプトが終了しました")
+        self.output_view.append(tr("Script finished"))
 
     def select_script(self):
         default_dir = self.working_dir or str(Path.cwd())
-        path, _ = QFileDialog.getOpenFileName(self, "スクリプトを選択", directory=default_dir, filter="Python Scripts (*.py)")
+        path, _ = QFileDialog.getOpenFileName(self, tr("Select script"), directory=default_dir, filter="Python Scripts (*.py)")
         if path:
             self.script_path = path  # フルパスを保持
             self.script_value.setText(Path(self.script_path).name)  # 表示はbasename
@@ -366,7 +367,7 @@ class ScriptRunnerWidget(QWidget):
                 self.config_changed_callback()
 
     def select_dir(self):
-        path = QFileDialog.getExistingDirectory(self, "作業ディレクトリを選択", directory=self.working_dir or str(Path.cwd()))
+        path = QFileDialog.getExistingDirectory(self, tr("Select working directory"), directory=self.working_dir or str(Path.cwd()))
         if path:
             self.working_dir = path
             self.dir_value.setText(Path(self.working_dir).name if self.working_dir else "")
@@ -377,7 +378,7 @@ class ScriptRunnerWidget(QWidget):
         """ウィンドウが閉じられるときにプロセスを終了させる"""
         from PyQt5.QtCore import QCoreApplication
 
-        self.output_view.append("[debug] closeEvent: プロセス終了処理")
+        self.output_view.append("[debug] closeEvent: process termination")
         self.output_view.repaint()
         QCoreApplication.processEvents()
 

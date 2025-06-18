@@ -225,7 +225,7 @@ class StickyMdiSubWindow(QMdiSubWindow):
                     handled = False
                 if not handled:
                     debug_print(
-                        f"[debug] 隣接しているが変化しないウィンドウ: {win.windowTitle()}"
+                        f"[debug] Adjacent window unchanged: {win.windowTitle()}"
                     )
             self.setGeometry(new_geom)
         else:
@@ -394,20 +394,20 @@ class StickyMdiSubWindow(QMdiSubWindow):
             
             if hasattr(parent, 'in_closing') and parent.in_closing:
                 # 終了処理中であれば何もせず閉じる
-                debug_print(f"[debug] 終了処理中: {widget_type}サブウィンドウを閉じます")
+                debug_print(f"[debug] Closing {widget_type} subwindow during shutdown")
             else:
                 # 個別に閉じる場合は設定を保存
                 if hasattr(parent, 'saveAllLaunchers'):
                     if widget_type == "Python":
-                        debug_print(f"[debug] 個別閉じる: {widget_type}サブウィンドウ({script})の設定を保存")
+                        debug_print(f"[debug] Saving {widget_type} subwindow settings ({script})")
                     elif widget_type == "Shell":
-                        debug_print(f"[debug] 個別閉じる: {widget_type}サブウィンドウ({cmdline[:20]}...)の設定を保存")
+                        debug_print(f"[debug] Saving {widget_type} subwindow settings ({cmdline[:20]}...)")
                     else:
-                        debug_print(f"[debug] 個別閉じる: 不明なタイプのサブウィンドウの設定を保存")
+                        debug_print(f"[debug] Saving unknown subwindow type settings")
                     
                     # 親ウィンドウの保存処理を呼び出し
                     parent.saveAllLaunchers()
         except Exception as e:
-            error_print(f"[error] サブウィンドウの閉じる処理中にエラー: {e}")
+            error_print(f"[error] Error during subwindow close processing: {e}")
         
         super().closeEvent(event)

@@ -2,6 +2,7 @@ import os
 import sys
 
 from .config_manager import LauncherConfigManager
+from .i18n import set_language, tr, LANG
 import time
 import argparse
 from pathlib import Path
@@ -47,7 +48,7 @@ class FadingSplashScreen(QSplashScreen):
             self.animation.valueChanged.connect(early_callback)
 
         self.animation.start(QPropertyAnimation.DeleteWhenStopped)  # 使い終わったらメモリを解放
-        debug_print("[debug] スプラッシュスクリーンのフェードアウトを開始")
+        debug_print("[debug] Starting splash screen fade-out")
 
 def get_default_config_path():
     """Return the path to the launcher's default YAML configuration file."""
@@ -89,39 +90,55 @@ def ensure_config(reset=False, ask_dialog=None):
 def ask_reset_dialog():
     msg = QMessageBox()
     msg.setIcon(QMessageBox.Question)
-    msg.setWindowTitle("設定ファイルの再作成確認")
-    msg.setText("コマンドラインオプションにより設定ファイルを新規作成します。よろしいですか？\n(既存の設定は上書きされます)")
+    msg.setWindowTitle(tr("Confirm recreate config"))
+    msg.setText(tr("Create new config from command line?\n(Existing settings will be overwritten)"))
     msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
     return msg.exec_()
 
 def parse_arguments():
-    """コマンドライン引数を解析します"""
-    parser = argparse.ArgumentParser(description='Fujielab Utility Launcher')
-    parser.add_argument('-d', '--debug', action='store_true',
-                        help='デバッグモードを有効にします。詳細なログメッセージが表示されます。')
-    parser.add_argument('-r', '--reset-config', action='store_true',
-                        help='設定ファイルを初期化します。既存の設定は上書きされます。')
-    parser.add_argument('-c', '--config', type=str, default=None,
-                        help='起動時に読み込む設定ファイルのパスを指定します。')
-    parser.add_argument('--version', action='store_true',
-                        help='バージョン情報を表示して終了します。')
+    """Parse command line arguments with language support."""
+    # Pre-parse only --lang to determine language for help messages
+    pre = argparse.ArgumentParser(add_help=False)
+    pre.add_argument('--lang', choices=['en', 'ja'], default=None,
+                    help=tr('Language for UI (en or ja). If omitted, system locale is used.'))
+    known, remaining = pre.parse_known_args()
 
-    return parser.parse_args()
+    # Set language early so translation works for help strings
+    set_language(known.lang)
+
+    parser = argparse.ArgumentParser(
+        description='Fujielab Utility Launcher',
+        parents=[pre]
+    )
+    parser.add_argument('-d', '--debug', action='store_true',
+                        help=tr('Enable debug mode. Detailed log messages will be displayed.'))
+    parser.add_argument('-r', '--reset-config', action='store_true',
+                        help=tr('Reset the configuration file. Existing settings will be overwritten.'))
+    parser.add_argument('-c', '--config', type=str, default=None,
+                        help=tr('Specify the path of the settings file to load at startup.'))
+    parser.add_argument('--version', action='store_true',
+                        help=tr('Display version information and exit.'))
+
+    return parser.parse_args(remaining), known.lang
 
 def main():
     # コマンドライン引数の解析
-    args = parse_arguments()
+    args, lang = parse_arguments()
+
+    # UI language
+    set_language(lang)
+    debug_print(f"[debug] UI language set to: {lang if lang else 'system default'}")
 
     # デバッグモードの設定
     set_debug_mode(args.debug)
     if args.debug:
-        debug_print("[debug] デバッグモードで起動しました")
+        debug_print("[debug] Launcher started in debug mode")
 
     # バージョン情報表示
     if args.version:
         print("Fujielab Utility Launcher v0.1.0")
         return 0
-        
+
     # 設定ファイルのリセットフラグ
     # -cオプションが指定されている場合は、常に設定をリセットする
     reset_config = args.reset_config or (args.config is not None)
@@ -150,33 +167,33 @@ def main():
 
         if os.path.exists(ico_path):
             app.setWindowIcon(QIcon(ico_path))
-            debug_print(f"[debug] アイコンを設定しました: {ico_path}")
+            debug_print(f"[debug] Set icon: {ico_path}")
         elif os.path.exists(png_path):
             app.setWindowIcon(QIcon(png_path))
-            debug_print(f"[debug] アイコンを設定しました: {png_path}")
+            debug_print(f"[debug] Set icon: {png_path}")
         else:
-            debug_print("[debug] アイコンファイルが見つかりません")
+            debug_print("[debug] Icon file not found")
     except Exception as e:
-        debug_print(f"[debug] アイコン設定エラー: {e}")
+        debug_print(f"[debug] Icon set error: {e}")
 
     # 1秒間スプラッシュスクリーンを表示中にメインウィンドウの初期化を行う
     # -cオプションが指定された場合は確認なしで強制的にリセット
     if config_import_path:
-        config_path = ensure_config(reset=True, ask_dialog=None)  # 強制リセット
-        debug_print("[debug] 設定ファイルをインポートするため、既存設定を強制リセットしました")
+        config_path = ensure_config(reset=True, ask_dialog=None)  # force reset
+        debug_print("[debug] Forced reset to import configuration file")
     else:
         config_path = ensure_config(reset=reset_config, ask_dialog=ask_reset_dialog if reset_config else None)
-    debug_print("[debug] メインウィンドウの事前初期化を開始")
+    debug_print("[debug] Starting main window pre-initialization")
     win = MainWindow()
     # メインウィンドウを非表示で準備する（初期化処理やリソース読み込みを完了させる）
     win.hide()
     app.processEvents()  # UIイベントを処理してレスポンシブさを維持
-    debug_print("[debug] メインウィンドウの初期化完了")
+    debug_print("[debug] Main window initialization complete")
 
     # 残りのスプラッシュスクリーン表示時間を計算（最低1秒間は表示）
     elapsed_time = time.time() - splash_start_time
     remaining_time = max(0, 1.0 - elapsed_time)
-    debug_print(f"[debug] 経過時間: {elapsed_time:.2f}秒、残り時間: {remaining_time:.2f}秒")
+    debug_print(f"[debug] Elapsed: {elapsed_time:.2f}s, remaining: {remaining_time:.2f}s")
     if remaining_time > 0:
         time.sleep(remaining_time)
 
@@ -184,12 +201,12 @@ def main():
     def show_main_window():
         # コマンドラインで設定ファイルが指定されていれば、それをインポートする
         if config_import_path and os.path.exists(config_import_path):
-            debug_print(f"[debug] コマンドラインで指定された設定ファイルをインポートします: {config_import_path}")
+            debug_print(f"[debug] Importing configuration file from command line: {config_import_path}")
             win.importConfigFromFile(config_import_path)
         
         win.show()
         splash.hide()  # finish()より高速
-        debug_print("[debug] スプラッシュスクリーン終了後にメインウィンドウを表示")
+        debug_print("[debug] Showing main window after splash screen")
 
     # フェードアウト開始（短くして200ミリ秒に）
     splash.fadeOut(200, show_main_window)

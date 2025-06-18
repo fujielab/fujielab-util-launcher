@@ -5,6 +5,7 @@ import platform
 import os  # EXEファイル実行のため追加
 from pathlib import Path
 from .debug_util import debug_print, error_print
+from .i18n import tr
 
 class ShellRunnerWidget(QWidget):
     def __init__(self):
@@ -18,15 +19,15 @@ class ShellRunnerWidget(QWidget):
         self.output_view.setReadOnly(True)
         fixed_font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
         self.output_view.setFont(fixed_font)
-        self.program_label = QLabel("コマンドライン:")
-        self.dir_label = QLabel("作業ディレクトリ:")
+        self.program_label = QLabel(tr("Command line:"))
+        self.dir_label = QLabel(tr("Working Directory:"))
         self.program_value = QLineEdit()
         self.program_value.setReadOnly(False)  # 直接編集可能に
         self.dir_value = QLineEdit()
         self.dir_value.setReadOnly(True)
-        self.dir_select_button = QPushButton("選択")
-        self.run_button = QPushButton("実行")
-        self.stop_button = QPushButton("停止")
+        self.dir_select_button = QPushButton(tr("Select"))
+        self.run_button = QPushButton(tr("Run"))
+        self.stop_button = QPushButton(tr("Stop"))
         self.run_button.setFixedHeight(26)
         self.stop_button.setFixedHeight(26)
         self.dir_select_button.setFixedSize(48, 24)
@@ -71,7 +72,7 @@ class ShellRunnerWidget(QWidget):
         layout.addLayout(form_layout)
         layout.addWidget(self.output_view)
         self.input_line = QLineEdit()
-        self.input_line.setPlaceholderText("標準入力をここに入力しEnterで送信")
+        self.input_line.setPlaceholderText(tr("Enter stdin here and press Enter"))
         self.input_line.setFixedHeight(22)
         self.input_line.setFont(fixed_font)
         self.input_line.returnPressed.connect(self.send_stdin)
@@ -85,7 +86,7 @@ class ShellRunnerWidget(QWidget):
             self.config_changed_callback()
 
     def select_dir(self):
-        path = QFileDialog.getExistingDirectory(self, "作業ディレクトリを選択", directory=self.working_dir or str(Path.cwd()))
+        path = QFileDialog.getExistingDirectory(self, tr("Select working directory"), directory=self.working_dir or str(Path.cwd()))
         if path:
             self.working_dir = path
             self.dir_value.setText(self.working_dir if self.working_dir else "")
@@ -101,7 +102,7 @@ class ShellRunnerWidget(QWidget):
         file_filter = "実行ファイル (*.exe);;すべてのファイル (*.*)"
         start_dir = self.working_dir if self.working_dir else str(Path.cwd())
         path, _ = QFileDialog.getOpenFileName(
-            self, "実行ファイルを選択", directory=start_dir, filter=file_filter
+            self, tr("Select executable file"), directory=start_dir, filter=file_filter
         )
         if path:
             self.exe_path = path
@@ -141,10 +142,10 @@ class ShellRunnerWidget(QWidget):
     def run_program(self):
         self.output_view.append("[debug] run_program called")
         if not self.program_cmdline:
-            self.output_view.append("コマンドラインが入力されていません")
+            self.output_view.append(tr("No command line specified"))
             return
-        self.output_view.append(f"[debug] コマンドライン: {self.program_cmdline}")
-        self.output_view.append(f"[debug] 作業ディレクトリ: {self.working_dir}")
+        self.output_view.append(f"[debug] Command line: {self.program_cmdline}")
+        self.output_view.append(f"[debug] Working directory: {self.working_dir}")
         # コマンドラインの種類を判断（EXEファイルかコマンドか）
         self.process = QProcess(self)
         command = self.program_cmdline.strip()
@@ -152,39 +153,39 @@ class ShellRunnerWidget(QWidget):
         if self.is_windows:  # Windows環境のみEXE直接実行対応
             exe_path, args = self._parse_exe_command(command)
             if exe_path and '.exe' in exe_path.lower():
-                self.output_view.append(f"[debug] EXEファイル実行モード: {exe_path}")
-                self.output_view.append(f"[debug] 引数: {args}")
+                self.output_view.append(f"[debug] EXE execute mode: {exe_path}")
+                self.output_view.append(f"[debug] Args: {args}")
 
                 # 絶対パスでない場合、作業ディレクトリからの相対パスとして扱う
                 if not os.path.isabs(exe_path) and self.working_dir:
                     full_exe_path = os.path.join(self.working_dir, exe_path)
-                    self.output_view.append(f"[debug] 絶対パスに変換: {full_exe_path}")
+                    self.output_view.append(f"[debug] Converted to absolute path: {full_exe_path}")
 
                     # 実際に存在するか確認
                     if os.path.exists(full_exe_path):
-                        self.output_view.append(f"[debug] EXEファイルが見つかりました: {full_exe_path}")
+                        self.output_view.append(f"[debug] EXE file found: {full_exe_path}")
                         # EXEファイルを直接実行（シェルを介さない）・引数も渡す
                         self.process.setProgram(full_exe_path)
                         self.process.setArguments(args)
                     else:
-                        self.output_view.append(f"<span style='color:red;'>警告: 指定されたEXEファイルが見つかりません: {full_exe_path}</span>")
+                        self.output_view.append(f"<span style='color:red;'>Warning: EXE not found: {full_exe_path}</span>")
                         # ファイルが見つからない場合も実行を試みる（エラーが発生する可能性あり）
                         self.process.setProgram(full_exe_path)
                         self.process.setArguments(args)
                 else:
                     # 絶対パスの場合はそのまま実行
                     if os.path.exists(exe_path):
-                        self.output_view.append(f"[debug] EXEファイルが見つかりました: {exe_path}")
+                        self.output_view.append(f"[debug] EXE file found: {exe_path}")
                         self.process.setProgram(exe_path)
                         self.process.setArguments(args)
                     else:
-                        self.output_view.append(f"<span style='color:red;'>警告: 指定されたEXEファイルが見つかりません: {exe_path}</span>")
+                        self.output_view.append(f"<span style='color:red;'>Warning: EXE not found: {exe_path}</span>")
                         # ファイルが見つからない場合も実行を試みる（エラーが発生する可能性あり）
                         self.process.setProgram(exe_path)
                         self.process.setArguments(args)
             else:
                 # 通常のコマンドラインの場合はシェル経由で実行
-                self.output_view.append("[debug] シェル実行モード")
+                self.output_view.append("[debug] Shell execution mode")
                 shell = "cmd.exe"
                 args = ["/C", command]
                 self.process.setProgram(shell)
@@ -201,7 +202,7 @@ class ShellRunnerWidget(QWidget):
         self.process.finished.connect(self.process_finished)
         self.output_view.clear()
         self.process.errorOccurred.connect(self.handle_process_error)
-        self.output_view.append("プログラムを開始します...")
+        self.output_view.append(tr("Starting program..."))
         self.process.start()
 
     def handle_process_error(self, error):
@@ -279,9 +280,9 @@ class ShellRunnerWidget(QWidget):
             else:
                 self.output_view.append(text)
         except Exception as e:
-            error_text = f"デコードエラー: {e}"
+            error_text = f"Decode error: {e}"
             self.output_view.append(f"<span style='color:red;'>{error_text}</span>")
-            debug_print(f"{'StdErr' if is_stderr else 'StdOut'} デコードエラー: {e}")
+            debug_print(f"{'StdErr' if is_stderr else 'StdOut'} decode error: {e}")
 
     def handle_stdout(self):
         data = self.process.readAllStandardOutput()
@@ -292,7 +293,7 @@ class ShellRunnerWidget(QWidget):
         self._decode_and_append_output(data, is_stderr=True)
 
     def process_finished(self):
-        self.output_view.append("プログラムが終了しました")
+        self.output_view.append(tr("Program finished"))
 
     def get_config(self):
         config = {
@@ -329,7 +330,7 @@ class ShellRunnerWidget(QWidget):
         """ウィンドウが閉じられるときにプロセスを終了させる"""
         from PyQt5.QtCore import QCoreApplication
 
-        self.output_view.append("[debug] closeEvent: プロセス終了処理")
+        self.output_view.append("[debug] closeEvent: process termination")
         self.output_view.repaint()
         QCoreApplication.processEvents()
 

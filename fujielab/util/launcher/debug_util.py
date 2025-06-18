@@ -1,32 +1,25 @@
-"""
-デバッグユーティリティモジュール
-コマンドライン引数 -d または --debug が指定されている場合のみデバッグメッセージを出力します
+"""Debug utility module.
+
+Messages are printed only when debug mode is enabled via ``-d`` or ``--debug``.
 """
 
 import sys
 
-# グローバル変数としてデバッグモードのフラグを定義
-# 初期設定ではコマンドライン引数をチェックして設定
+# Global debug flag. Initially enabled if ``-d`` or ``--debug`` is in ``sys.argv``.
 debug_mode = any(arg in ['-d', '--debug'] for arg in sys.argv)
 
 def set_debug_mode(enabled=True):
-    """
-    デバッグモードを明示的に設定します
-    """
+    """Explicitly enable or disable debug mode."""
     global debug_mode
     debug_mode = enabled
     if debug_mode:
-        debug_print("[debug] デバッグモードを有効化しました")
+        debug_print("[debug] Debug mode enabled")
 
 def debug_print(*args, **kwargs):
-    """
-    デバッグモードが有効な場合のみメッセージを出力します
-    """
+    """Print messages only when debug mode is active."""
     if debug_mode:
         print(*args, **kwargs)
 
 def error_print(*args, **kwargs):
-    """
-    エラーメッセージは常に出力します
-    """
+    """Print error messages unconditionally."""
     print(*args, **kwargs)
