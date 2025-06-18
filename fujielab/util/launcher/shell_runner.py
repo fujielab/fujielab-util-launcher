@@ -295,6 +295,61 @@ class ShellRunnerWidget(QWidget):
     def process_finished(self):
         self.output_view.append(tr("Program finished"))
 
+    def _parse_exe_command(self, command):
+        """コマンドライン文字列をEXEパスと引数に分割する
+        
+        Args:
+            command (str): コマンドライン文字列
+            
+        Returns:
+            tuple: (実行ファイルパス, 引数のリスト)
+        """
+        command = command.strip()
+        
+        # コマンドが空の場合
+        if not command:
+            return None, []
+            
+        # ダブルクォートで囲まれた部分を処理する
+        parts = []
+        in_quotes = False
+        current_part = ""
+        
+        for char in command:
+            if char == '"' and not in_quotes:
+                in_quotes = True
+                current_part += char
+            elif char == '"' and in_quotes:
+                in_quotes = False
+                current_part += char
+            elif char.isspace() and not in_quotes:
+                if current_part:
+                    parts.append(current_part)
+                    current_part = ""
+            else:
+                current_part += char
+                
+        if current_part:
+            parts.append(current_part)
+            
+        if not parts:
+            return None, []
+            
+        # 実行ファイルパスからクォートを除去
+        exe_path = parts[0]
+        if exe_path.startswith('"') and exe_path.endswith('"'):
+            exe_path = exe_path[1:-1]
+            
+        # 引数リストを作成（クォート処理も行う）
+        args = []
+        for arg in parts[1:]:
+            if arg.startswith('"') and arg.endswith('"'):
+                args.append(arg[1:-1])
+            else:
+                args.append(arg)
+                
+        return exe_path, args
+
     def get_config(self):
         config = {
             'cmdline': self.program_cmdline,
