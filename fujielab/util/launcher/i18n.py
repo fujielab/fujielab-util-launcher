@@ -61,6 +61,7 @@ _translations = {
         'Select directory': 'ディレクトリ選択',
         'Interpreter': 'インタプリタ',
         'Command line:': 'コマンドライン:',
+        'Arguments:': '引数:',
         'Main Menu': 'メインメニュー',
         'Select script': 'スクリプトを選択',
         'Select executable file': '実行ファイルを選択',

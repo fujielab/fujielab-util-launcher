@@ -49,6 +49,7 @@ fujielab-launcher --config /path/to/your/custom_config.yaml
 
 - 設定可能な複数プログラムランチャー
 - Pythonスクリプトやシェルコマンドのサポート
+- Pythonスクリプトにコマンドライン引数を渡す機能
 - カスタマイズ可能なワークスペースディレクトリ設定
 - クロスプラットフォーム対応（Windows、macOS、Linux）
 

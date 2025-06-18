@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QTextEdit, QLabel, QLineEdit, QPushButton, QHBoxLayout, QFormLayout, QVBoxLayout, QSizePolicy, QComboBox, QFileDialog, QGridLayout
 from PyQt5.QtCore import QProcess, Qt
+import shlex
 from PyQt5.QtGui import QFontDatabase
 import subprocess
 import json
@@ -15,6 +16,7 @@ class ScriptRunnerWidget(QWidget):
         self.process = None
         self.interpreter_path = ""
         self.script_path = ""
+        self.script_args = ""
         self.working_dir = ""
         self.interpreter_map = {}
         # バッファーを追加
@@ -35,14 +37,16 @@ class ScriptRunnerWidget(QWidget):
         self.dir_value = QLineEdit()
         self.dir_value.setReadOnly(True)
         self.dir_select_button = QPushButton(tr("Select"))
+        self.args_label = QLabel(tr("Arguments:"))
+        self.args_value = QLineEdit()
         # インタプリタリストをセット
         interp_map = self.get_interpreters()
         self.interpreter_map = interp_map
         self.interpreter_combo.addItems(list(interp_map.keys()))
         # --- レイアウト ---
-        for lineedit in [self.script_value, self.dir_value]:
+        for lineedit in [self.script_value, self.dir_value, self.args_value]:
             lineedit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        for label in [self.interpreter_label, self.script_label, self.dir_label]:
+        for label in [self.interpreter_label, self.script_label, self.args_label, self.dir_label]:
             label.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         self.run_button = QPushButton(tr("Run"))
         self.stop_button = QPushButton(tr("Stop"))
@@ -53,6 +57,7 @@ class ScriptRunnerWidget(QWidget):
         self.interpreter_combo.setFixedHeight(24)
         self.script_value.setFixedHeight(24)
         self.dir_value.setFixedHeight(24)
+        self.args_value.setFixedHeight(24)
         control_layout = QHBoxLayout()
         control_layout.setSpacing(2)
         control_layout.setContentsMargins(0, 0, 0, 0)
@@ -70,6 +75,8 @@ class ScriptRunnerWidget(QWidget):
         form_layout.addWidget(self.script_label, 2, 0)
         form_layout.addWidget(self.script_value, 2, 1)
         form_layout.addWidget(self.script_select_button, 2, 2)
+        form_layout.addWidget(self.args_label, 3, 0)
+        form_layout.addWidget(self.args_value, 3, 1, 1, 2)
         layout = QVBoxLayout()
         layout.setSpacing(2)
         layout.setContentsMargins(4, 4, 4, 4)
@@ -102,6 +109,7 @@ class ScriptRunnerWidget(QWidget):
             if default_workdir:
                 self.working_dir = default_workdir
                 self.dir_value.setText(Path(self.working_dir).name if self.working_dir else "")
+            self.args_value.setText("")
         self.config_changed_callback = None
 
         # イベント接続を追加
@@ -110,10 +118,16 @@ class ScriptRunnerWidget(QWidget):
         self.interpreter_combo.currentIndexChanged.connect(self.on_interpreter_changed)
         self.script_select_button.clicked.connect(self.select_script)
         self.dir_select_button.clicked.connect(self.select_dir)
+        self.args_value.textChanged.connect(self.on_args_changed)
 
     def on_interpreter_changed(self):
         label = self.interpreter_combo.currentText()
         self.interpreter_path = self.interpreter_map.get(label, "python")
+
+    def on_args_changed(self, text):
+        self.script_args = text
+        if self.config_changed_callback:
+            self.config_changed_callback()
 
     def send_stdin(self):
         text = self.input_line.text()
@@ -177,7 +191,8 @@ class ScriptRunnerWidget(QWidget):
         return {
             'interpreter': self.interpreter_path,
             'script': self.script_path,
-            'workdir': self.working_dir
+            'workdir': self.working_dir,
+            'args': self.script_args,
         }
 
     def apply_config(self, config):
@@ -188,8 +203,10 @@ class ScriptRunnerWidget(QWidget):
         self.interpreter_combo.setCurrentText(label)
         self.script_path = config.get('script', '')
         self.working_dir = config.get('workdir', '')
+        self.script_args = config.get('args', '')
         self.script_value.setText(Path(self.script_path).name if self.script_path else "")
         self.dir_value.setText(Path(self.working_dir).name if self.working_dir else "")
+        self.args_value.setText(self.script_args)
 
     def run_script(self, checked=False):
         self.output_view.append(f"[debug] run_script called (checked={checked})")
@@ -222,6 +239,9 @@ class ScriptRunnerWidget(QWidget):
         args = [self.script_path]
         if self.interpreter_path.endswith("python") or self.interpreter_path.endswith("python3"):
             args = ["-u", self.script_path]
+
+        user_args = shlex.split(self.script_args) if self.script_args else []
+        args += user_args
 
         self.process.setArguments(args)
         self.process.setWorkingDirectory(self.working_dir)
