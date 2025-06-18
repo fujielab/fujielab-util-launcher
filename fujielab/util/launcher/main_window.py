@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QMenuBar, QAction, QSizePolicy, QMdiArea, QFileDialog, QMessageBox, QToolBar, QMenu, QToolButton
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtCore import Qt, QPoint, QRect
+from .i18n import tr
 from .sticky_mdi import StickyMdiSubWindow
 from .script_runner import ScriptRunnerWidget
 from .shell_runner import ShellRunnerWidget
@@ -51,7 +52,7 @@ class CustomMdiArea(QMdiArea):
         cell_width = area_width / cols
         cell_height = area_height / rows
 
-        debug_print(f"[debug] タイル配置: {windows_count}ウィンドウ, {cols}列 x {rows}行, セルサイズ: {cell_width}x{cell_height}")
+        debug_print(f"[debug] Tile layout: {windows_count} windows, {cols} cols x {rows} rows, cell {cell_width}x{cell_height}")
 
         # 各グリッドセル位置を計算
         grid_cells = []
@@ -120,12 +121,12 @@ class CustomMdiArea(QMdiArea):
         for window, cell_rect in assignments:
             window.setGeometry(cell_rect)
 
-        debug_print(f"[debug] タイル配置完了: {len(assignments)}ウィンドウを配置しました")
+        debug_print(f"[debug] Tile layout finished: placed {len(assignments)} windows")
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        debug_print("[debug] ======== MainWindow初期化開始 ========")
+        debug_print("[debug] ======== MainWindow initialization start ========")
         self.setWindowTitle('FUJIE Lab. Program Launcher')
         central = QWidget()
         self.setCentralWidget(central)
@@ -144,7 +145,7 @@ class MainWindow(QMainWindow):
             self.tool_bar = None
         else:
             # MacOS以外ではカスタムツールバーを使用してメニューを作成
-            self.tool_bar = QToolBar("メインメニュー", self)
+            self.tool_bar = QToolBar(tr("Main Menu"), self)
             self.tool_bar.setMovable(False)  # 移動できないように設定
             self.tool_bar.setFloatable(False)  # フロート不可
             self.tool_bar.setContextMenuPolicy(Qt.PreventContextMenu)  # コンテキストメニューを無効化
@@ -172,9 +173,9 @@ class MainWindow(QMainWindow):
         self._suppress_save = True
 
         # 前回の設定を復元
-        debug_print("[debug] 前回の設定を復元します")
+        debug_print("[debug] Restoring previous settings")
         self.restoreAllLaunchers()
-        debug_print("[debug] ======== MainWindow初期化完了 ========")
+        debug_print("[debug] ======== MainWindow initialization complete ========")
 
     def initMenu(self):
         # ツールバーとメニューバーをクリア
@@ -183,16 +184,16 @@ class MainWindow(QMainWindow):
         self.menu_bar.clear()
 
         # ===== ファイルメニュー =====
-        fileMenu = QMenu('ファイル', self)
+        fileMenu = QMenu(tr('File'), self)
 
         # 新規Pythonランチャー
-        newPythonLauncherAct = QAction('新規Pythonランチャー', self)
+        newPythonLauncherAct = QAction(tr('New Python Launcher'), self)
         newPythonLauncherAct.setShortcut(QKeySequence('Ctrl+N'))
         newPythonLauncherAct.triggered.connect(lambda: self.createPythonLauncherWindow())
         fileMenu.addAction(newPythonLauncherAct)
 
         # 新規シェルランチャー
-        newShellLauncherAct = QAction('新規シェルランチャー', self)
+        newShellLauncherAct = QAction(tr('New Shell Launcher'), self)
         newShellLauncherAct.setShortcut(QKeySequence('Shift+Ctrl+N'))
         newShellLauncherAct.triggered.connect(lambda: self.createShellLauncherWindow())
         fileMenu.addAction(newShellLauncherAct)
@@ -200,13 +201,13 @@ class MainWindow(QMainWindow):
         fileMenu.addSeparator()
 
         # 設定のインポート
-        importAct = QAction('設定のインポート', self)
+        importAct = QAction(tr('Import Settings'), self)
         importAct.setShortcut(QKeySequence('Ctrl+I'))
         importAct.triggered.connect(self.importConfig)
         fileMenu.addAction(importAct)
 
         # 設定のエクスポート
-        exportAct = QAction('設定のエクスポート', self)
+        exportAct = QAction(tr('Export Settings'), self)
         exportAct.setShortcut(QKeySequence('Shift+Ctrl+S'))
         exportAct.triggered.connect(self.exportConfig)
         fileMenu.addAction(exportAct)
@@ -214,48 +215,48 @@ class MainWindow(QMainWindow):
         fileMenu.addSeparator()
 
         # 終了
-        exitAct = QAction('終了', self)
+        exitAct = QAction(tr('Exit'), self)
         exitAct.setShortcut(QKeySequence.Quit)
         exitAct.triggered.connect(self.close)
         fileMenu.addAction(exitAct)
 
         # MacOS以外の場合のみ、ツールバーにメニューアクションを追加
         if not self.is_macos:
-            fileMenuAction = QAction('ファイル', self)
+            fileMenuAction = QAction(tr('File'), self)
             fileMenuAction.setMenu(fileMenu)
             self.addMenuActionToToolbar(fileMenuAction)
 
         # ===== 整列メニュー =====
-        arrangeMenu = QMenu('整列', self)
+        arrangeMenu = QMenu(tr('Arrange'), self)
 
         # タイル
-        tileAct = QAction('タイル', self)
+        tileAct = QAction(tr('Tile'), self)
         tileAct.triggered.connect(self.mdi.tileSubWindows)
         arrangeMenu.addAction(tileAct)
 
         # カスケード
-        cascadeAct = QAction('カスケード', self)
+        cascadeAct = QAction(tr('Cascade'), self)
         cascadeAct.triggered.connect(self.mdi.cascadeSubWindows)
         arrangeMenu.addAction(cascadeAct)
 
         # MacOS以外の場合のみ、ツールバーにメニューアクションを追加
         if not self.is_macos:
-            arrangeMenuAction = QAction('整列', self)
+            arrangeMenuAction = QAction(tr('Arrange'), self)
             arrangeMenuAction.setMenu(arrangeMenu)
             self.addMenuActionToToolbar(arrangeMenuAction)
 
         # ===== 設定メニュー =====
-        settingsMenu = QMenu('設定', self)
+        settingsMenu = QMenu(tr('Settings'), self)
 
         # グローバル設定
-        settingsAct = QAction('グローバル設定', self)
+        settingsAct = QAction(tr('Global Settings'), self)
         settingsAct.setShortcut(QKeySequence('Ctrl+,'))
         settingsAct.triggered.connect(self.openSettingsDialog)
         settingsMenu.addAction(settingsAct)
 
         # MacOS以外の場合のみ、ツールバーにメニューアクションを追加
         if not self.is_macos:
-            settingsMenuAction = QAction('設定', self)
+            settingsMenuAction = QAction(tr('Settings'), self)
             settingsMenuAction.setMenu(settingsMenu)
             self.addMenuActionToToolbar(settingsMenuAction)
 
@@ -365,10 +366,10 @@ class MainWindow(QMainWindow):
         return super().eventFilter(obj, event)
 
     def importConfig(self):
-        path, _ = QFileDialog.getOpenFileName(self, "設定ファイルのインポート", filter="YAML Files (*.yaml *.yml)")
+        path, _ = QFileDialog.getOpenFileName(self, tr("Import Settings File"), filter="YAML Files (*.yaml *.yml)")
         if path:
             self.config_manager.import_config(path)
-            reply = QMessageBox.question(self, "再起動確認", "設定ファイルをインポートしました。再起動しますか？", QMessageBox.Yes | QMessageBox.No)
+            reply = QMessageBox.question(self, tr("Restart Confirmation"), tr("Configuration imported. Restart?"), QMessageBox.Yes | QMessageBox.No)
             if reply == QMessageBox.Yes:
                 import sys, os
                 os.execv(sys.executable, [sys.executable] + sys.argv)
@@ -382,33 +383,33 @@ class MainWindow(QMainWindow):
         if path and os.path.exists(path):
             try:
                 self.config_manager.import_config(path)
-                debug_print(f"[debug] 設定ファイルをインポートしました: {path}")
+                debug_print(f"[debug] Imported config file: {path}")
                 # 設定が変更されたので再起動せずに設定を即時反映
                 self._suppress_save = True
                 self.restoreAllLaunchers()
                 self._suppress_save = False
             except Exception as e:
-                error_print(f"[error] 設定ファイルのインポートに失敗しました: {e}")
+                error_print(f"[error] Failed to import settings file: {e}")
 
     def exportConfig(self):
-        path, _ = QFileDialog.getSaveFileName(self, "設定ファイルのエクスポート", filter="YAML Files (*.yaml *.yml)")
+        path, _ = QFileDialog.getSaveFileName(self, tr("Export Settings File"), filter="YAML Files (*.yaml *.yml)")
         if path:
             self.config_manager.export(path)
-            QMessageBox.information(self, "エクスポート完了", "設定ファイルをエクスポートしました。")
+            QMessageBox.information(self, tr("Export Completed"), tr("Configuration exported."))
 
     def saveAllLaunchers(self):
         if getattr(self, '_suppress_save', False):
-            debug_print("[debug] saveAllLaunchers: 保存抑制中のため処理をスキップします")
+            debug_print("[debug] saveAllLaunchers: skipping because saving is suppressed")
             return
 
         launchers = []
         subwindow_count = len(self.mdi.subWindowList())
         in_closing = hasattr(self, 'in_closing') and self.in_closing
-        debug_print(f"[debug] saveAllLaunchers: サブウィンドウ数 {subwindow_count}, 終了処理中={in_closing}")
+        debug_print(f"[debug] saveAllLaunchers: subwindow count {subwindow_count}, closing={in_closing}")
 
         # 終了処理中はキャッシュを使用（closeEventで更新済み）
         if in_closing and hasattr(self, 'launcher_cache') and self.launcher_cache:
-            debug_print(f"[debug] 終了処理中: キャッシュからランチャー設定を使用 ({len(self.launcher_cache)}個)")
+            debug_print(f"[debug] During closing: using cached launcher settings ({len(self.launcher_cache)} items)")
             launchers = self.launcher_cache
 
             # キャッシュ内容のデバッグ出力
@@ -417,14 +418,14 @@ class MainWindow(QMainWindow):
                 config = launcher.get('config', {})
                 if ltype == 'python':
                     script = config.get('script', '(未設定)')
-                    debug_print(f"[debug] キャッシュ[{idx}] Python設定: script={Path(script).name if script else '(未設定)'}")
+                    debug_print(f"[debug] Cache[{idx}] Python config: script={Path(script).name if script else '(unset)'}")
                 else:
                     cmdline = config.get('cmdline', '(未設定)')
-                    debug_print(f"[debug] キャッシュ[{idx}] Shell設定: cmdline={cmdline[:20] + '...' if len(cmdline) > 20 else cmdline}")
+                    debug_print(f"[debug] Cache[{idx}] Shell config: cmdline={cmdline[:20] + '...' if len(cmdline) > 20 else cmdline}")
 
         # サブウィンドウが存在する場合、現在の状態からキャッシュを更新
         elif subwindow_count > 0:
-            debug_print("[debug] 現在のサブウィンドウから設定を取得してキャッシュ更新")
+            debug_print("[debug] Updating cache from current subwindows")
 
             # 終了処理中でなければキャッシュをクリア
             if not in_closing:
@@ -445,18 +446,21 @@ class MainWindow(QMainWindow):
 
                     # 設定内容のデバッグ出力
                     if ltype == 'python':
-                        script = config.get('script', '(未設定)')
-                        interpreter = config.get('interpreter', '(未設定)')
-                        workdir = config.get('workdir', '(未設定)')
-                        debug_print(f"[debug] Python設定: script={Path(script).name if script else '(未設定)'}, "
-                            f"interpreter={Path(interpreter).name if interpreter else '(未設定)'}, "
-                            f"workdir={Path(workdir).name if workdir else '(未設定)'}")
+                        script = config.get('script', '(unset)')
+                        interpreter = config.get('interpreter', '(unset)')
+                        workdir = config.get('workdir', '(unset)')
+                        debug_print(
+                            f"[debug] Python config: script={Path(script).name if script else '(unset)'}, "
+                            f"interpreter={Path(interpreter).name if interpreter else '(unset)'}, "
+                            f"workdir={Path(workdir).name if workdir else '(unset)'}"
+                        )
                     else:
-                        cmdline = config.get('cmdline', '(未設定)')
-                        workdir = config.get('workdir', '(未設定)')
-                        debug_print(f"[debug] Shell設定: cmdline={cmdline[:20] + '...' if len(cmdline) > 20 else cmdline}, "
-                            f"workdir={Path(workdir).name if workdir else '(未設定)'}")
-
+                        cmdline = config.get('cmdline', '(unset)')
+                        workdir = config.get('workdir', '(unset)')
+                        debug_print(
+                            f"[debug] Shell config: cmdline={cmdline[:20] + '...' if len(cmdline) > 20 else cmdline}, "
+                            f"workdir={Path(workdir).name if workdir else '(unset)'}"
+                        )
                     launcher_info = {
                         'type': ltype,
                         'geometry': [geo.x(), geo.y(), geo.width(), geo.height()],
@@ -470,17 +474,17 @@ class MainWindow(QMainWindow):
                         self.launcher_cache.append(launcher_info)
 
                 except Exception as e:
-                    error_print(f"[error] ウィジェットからの設定取得エラー: {e}")
+                    error_print(f"[error] Error retrieving settings from widget: {e}")
         # サブウィンドウが0の場合でも、終了処理でなければキャッシュが破棄されないようにする
         elif not in_closing and hasattr(self, 'launcher_cache') and self.launcher_cache:
-            debug_print(f"[debug] サブウィンドウ無し＆終了処理でない: キャッシュからランチャー設定を使用 ({len(self.launcher_cache)}個)")
+            debug_print(f"[debug] No subwindows and not closing: using cached launcher settings ({len(self.launcher_cache)} items)")
             launchers = self.launcher_cache
 
         main_geo = self.geometry()
         self.config_manager.set_launchers(launchers)
         self.config_manager.set_mainwindow_geometry([main_geo.x(), main_geo.y(), main_geo.width(), main_geo.height()])
         self.config_manager.set_mainwindow_state(self.isMaximized())
-        debug_print(f"[debug] 設定を保存しました: ランチャー数={len(launchers)}")
+        debug_print(f"[debug] Saved settings: launcher count={len(launchers)}")
 
     def restoreWindowGeometry(self):
         geo = self.config_manager.get_mainwindow_geometry()
@@ -492,7 +496,7 @@ class MainWindow(QMainWindow):
 
     def restoreAllLaunchers(self):
         launchers = self.config_manager.get_launchers()
-        debug_print(f"[debug] 設定ファイルから{len(launchers)}個のランチャー設定を読み込みました")
+        debug_print(f"[debug] Loaded {len(launchers)} launcher settings from file")
 
         # キャッシュも復元
         self.launcher_cache = launchers.copy() if launchers else []
@@ -503,12 +507,12 @@ class MainWindow(QMainWindow):
             config = l.get('config', {})
 
             if ltype == 'python':
-                script = config.get('script', '(未設定)')
-                debug_print(f"[debug] {idx+1}番目: Python設定を復元 script={script}")
+                script = config.get('script', '(unset)')
+                debug_print(f"[debug] Restoring entry {idx+1}: Python script={script}")
                 self.createPythonLauncherWindow(config=config, geometry=geometry)
             elif ltype == 'shell':
-                cmdline = config.get('cmdline', '(未設定)')
-                debug_print(f"[debug] {idx+1}番目: Shell設定を復元 cmdline={cmdline[:20]+'...' if len(cmdline) > 20 else cmdline}")
+                cmdline = config.get('cmdline', '(unset)')
+                debug_print(f"[debug] Restoring entry {idx+1}: Shell cmdline={cmdline[:20]+'...' if len(cmdline) > 20 else cmdline}")
                 self.createShellLauncherWindow(config=config, geometry=geometry)
 
     def resizeEvent(self, event):
@@ -568,16 +572,16 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         """メインウィンドウが閉じられるときに設定を保存し、全てのサブウィンドウを明示的に閉じる"""
-        debug_print("[debug] ======== MainWindow closeEvent: 終了処理開始 ========")
+        debug_print("[debug] ======== MainWindow closeEvent: begin shutdown ========")
 
         # 終了処理中フラグをセット(先にセットして、サブウィンドウの個別保存を防止)
         self.in_closing = True
         self._suppress_save = False  # 強制的に保存を有効化
 
         # キャッシュ更新のために全サブウィンドウ設定を取得
-        debug_print("[debug] サブウィンドウの設定をキャッシュ（終了前の最終状態）")
+        debug_print("[debug] Caching subwindow settings before shutdown")
         subwindow_count = len(self.mdi.subWindowList())
-        debug_print(f"[debug] 現在のサブウィンドウ数: {subwindow_count}")
+        debug_print(f"[debug] Current subwindow count: {subwindow_count}")
 
         # キャッシュをクリアして最新状態を反映
         self.launcher_cache = []
@@ -606,30 +610,30 @@ class MainWindow(QMainWindow):
 
                 # 設定内容のデバッグ出力
                 if ltype == 'python':
-                    script = config.get('script', '(未設定)')
-                    interpreter = config.get('interpreter', '(未設定)')
-                    workdir = config.get('workdir', '(未設定)')
-                    debug_print(f"[debug] キャッシュしたPython設定: script={script}, interpreter={interpreter}")
+                    script = config.get('script', '(unset)')
+                    interpreter = config.get('interpreter', '(unset)')
+                    workdir = config.get('workdir', '(unset)')
+                    debug_print(f"[debug] Cached Python config: script={script}, interpreter={interpreter}")
                 else:
-                    cmdline = config.get('cmdline', '(未設定)')
-                    workdir = config.get('workdir', '(未設定)')
-                    debug_print(f"[debug] キャッシュしたShell設定: cmdline={cmdline[:30]}...")
+                    cmdline = config.get('cmdline', '(unset)')
+                    workdir = config.get('workdir', '(unset)')
+                    debug_print(f"[debug] Cached Shell config: cmdline={cmdline[:30]}...")
 
             except Exception as e:
-                error_print(f"[error] クローズ時のウィジェット設定取得エラー: {e}")
+                error_print(f"[error] Error retrieving widget settings on close: {e}")
 
-        debug_print(f"[debug] {len(self.launcher_cache)}個のランチャー設定をキャッシュしました")
+        debug_print(f"[debug] Cached {len(self.launcher_cache)} launcher settings")
 
         # 設定を保存（キャッシュから保存される）
         self.saveAllLaunchers()
-        debug_print("[debug] 設定ファイルに保存しました")
+        debug_print("[debug] Settings file saved")
 
         # サブウィンドウを閉じる
-        debug_print("[debug] サブウィンドウを閉じます")
+        debug_print("[debug] Closing subwindows")
         for window in self.mdi.subWindowList():
             window.close()
 
-        debug_print("[debug] ======== MainWindow closeEvent: 終了処理完了 ========")
+        debug_print("[debug] ======== MainWindow closeEvent: shutdown complete ========")
         event.accept()
 
     def showMenuFromAction(self, action):

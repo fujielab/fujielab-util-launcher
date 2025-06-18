@@ -1,4 +1,5 @@
 from PyQt5.QtWidgets import QDialog, QComboBox, QLabel, QPushButton, QFormLayout, QDialogButtonBox, QFileDialog, QFrame
+from .i18n import tr
 from pathlib import Path
 
 class GlobalSettingsDialog(QDialog):
@@ -8,14 +9,14 @@ class GlobalSettingsDialog(QDialog):
     """
     def __init__(self, parent=None, envs=None, current_env="", current_dir="", get_interpreters_func=None):
         super().__init__(parent)
-        self.setWindowTitle("グローバル設定")
+        self.setWindowTitle(tr("Global Settings"))
         self.env_combo = QComboBox()
         self.env_combo.addItems(envs or [])
         if current_env in (envs or []):
             self.env_combo.setCurrentText(current_env)
         self.dir_path_label = QLabel(current_dir)
         
-        dir_button = QPushButton("ディレクトリ選択")
+        dir_button = QPushButton(tr("Select directory"))
         dir_button.clicked.connect(self.select_dir)
         
         layout = QFormLayout()
@@ -26,8 +27,8 @@ class GlobalSettingsDialog(QDialog):
         interpreter_frame.setFrameShadow(QFrame.Raised)
         interpreter_frame.setMinimumWidth(400)  # Set minimum width
         interpreter_layout = QFormLayout(interpreter_frame)
-        interpreter_layout.addRow("デフォルトPythonインタプリタ", self.env_combo)
-        refresh_button = QPushButton("インタプリタリストの更新")
+        interpreter_layout.addRow(tr("Default Python interpreter"), self.env_combo)
+        refresh_button = QPushButton(tr("Refresh interpreter list"))
         refresh_button.clicked.connect(self.refresh_interpreters)
         interpreter_layout.addRow("", refresh_button)
         layout.addRow("", interpreter_frame)
@@ -37,7 +38,7 @@ class GlobalSettingsDialog(QDialog):
         workdir_frame.setFrameShadow(QFrame.Raised)
         workdir_frame.setMinimumWidth(400)  # Same minimum width
         workdir_layout = QFormLayout(workdir_frame)
-        workdir_layout.addRow("デフォルト作業ディレクトリ", self.dir_path_label)
+        workdir_layout.addRow(tr("Default working directory"), self.dir_path_label)
         workdir_layout.addRow("", dir_button)
         layout.addRow("", workdir_frame)
 
@@ -64,7 +65,7 @@ class GlobalSettingsDialog(QDialog):
                 self.env_combo.setCurrentText(current_text)
 
     def select_dir(self):
-        path = QFileDialog.getExistingDirectory(self, "デフォルト作業ディレクトリを選択")
+        path = QFileDialog.getExistingDirectory(self, tr("Select default working directory"))
         if path:
             self.dir_path_label.setText(path)
 
