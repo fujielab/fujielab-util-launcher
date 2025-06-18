@@ -48,7 +48,10 @@ class ScriptRunnerWidget(QWidget):
                 # もしインタープリタが見つからない場合、現在の実行環境を追加
                 debug_print("No interpreters found, using current Python as fallback")
                 import sys
-                fallback_label = f"Python {sys.version.split()[0]} (現在の環境)"
+                import os
+                # 環境名を正確に取得
+                env_name = self.get_current_env_name()
+                fallback_label = f"Python {sys.version.split()[0]} ({env_name})"
                 interp_map[fallback_label] = sys.executable
             self.interpreter_map = interp_map
             self.interpreter_combo.addItems(list(interp_map.keys()))
@@ -165,7 +168,32 @@ class ScriptRunnerWidget(QWidget):
         
         # バックアップとして、最低でも現在のPythonは確実に含める
         import sys
-        fallback_label = f"Python {sys.version.split()[0]} (現在の実行環境)"
+        import os
+
+        # 環境名を正確に取得するためのロジック
+        env_name = "現在の環境"
+        try:
+            # Condaの環境変数から環境名を取得
+            conda_default_env = os.environ.get("CONDA_DEFAULT_ENV")
+            if conda_default_env:
+                env_name = f"conda: {conda_default_env}"
+            else:
+                # 実行パスからの推定
+                py_path = sys.executable
+                # パスからcondaの環境名を推測
+                path_parts = Path(py_path).parts
+                if "envs" in path_parts:
+                    # パスがenvs/環境名を含む場合
+                    idx = path_parts.index("envs")
+                    if idx + 1 < len(path_parts):
+                        env_name = f"conda: {path_parts[idx + 1]}"
+                elif "venv" in path_parts or "virtualenv" in path_parts:
+                    # 仮想環境と思われる場合
+                    env_name = "venv"
+        except Exception as e:
+            debug_print(f"Error determining environment name: {e}")
+
+        fallback_label = f"Python {sys.version.split()[0]} ({env_name})"
         fallback_path = sys.executable
         interpreters[fallback_label] = fallback_path
         import platform
@@ -227,7 +255,30 @@ class ScriptRunnerWidget(QWidget):
                     ).strip()
                 
                 debug_print(f"Found system Python at: {sys_path}")
-                label = f"Python {sys_version} (system)"
+                
+                # システムPythonの適切な表示名を決定
+                if is_windows:
+                    if "WindowsApps" in sys_path:
+                        env_type = "Microsoft Store"
+                    elif "Program Files" in sys_path:
+                        env_type = "System (Program Files)"
+                    elif "ProgramData" in sys_path:
+                        env_type = "System (ProgramData)"
+                    elif "AppData" in sys_path or "Local" in sys_path:
+                        env_type = "User"
+                    else:
+                        env_type = "System"
+                else:
+                    if "/usr/bin" in sys_path:
+                        env_type = "System"
+                    elif "/usr/local/bin" in sys_path:
+                        env_type = "Local"
+                    elif "/opt" in sys_path:
+                        env_type = "Optional"
+                    else:
+                        env_type = "System"
+                
+                label = f"Python {sys_version} ({env_type})"
                 interpreters[label] = sys_path
             except Exception as e:
                 error_print(f"Error getting system Python version: {e}")
@@ -402,8 +453,27 @@ class ScriptRunnerWidget(QWidget):
                     version = subprocess.check_output(
                         [python_path, "--version"], universal_newlines=True
                     ).strip().split()[1]
-                    env_name = Path(env_path).name
-                    label = f"Python {version} (conda: {env_name})"
+                    
+                    # 環境名を適切に抽出
+                    if "envs" in str(env_path):
+                        # パスの中でenvsが見つかる場合、その次の部分を環境名として使用
+                        path_parts = Path(env_path).parts
+                        try:
+                            idx = list(map(str.lower, path_parts)).index("envs")
+                            if idx + 1 < len(path_parts):
+                                env_name = f"conda: {path_parts[idx + 1]}"
+                            else:
+                                env_name = "conda: " + Path(env_path).name
+                        except ValueError:
+                            env_name = "conda: " + Path(env_path).name
+                    else:
+                        # envs を含まないが conda パスの場合はbase環境
+                        if any(x in str(env_path).lower() for x in ["anaconda", "miniconda", "conda"]):
+                            env_name = "conda: base"
+                        else:
+                            env_name = Path(env_path).name
+                    
+                    label = f"Python {version} ({env_name})"
                     interpreters[label] = python_path
                     debug_print(f"Added interpreter: {label} -> {python_path}")
                 except Exception as e:
@@ -411,6 +481,95 @@ class ScriptRunnerWidget(QWidget):
                     continue
         except Exception as e:
             error_print(f"[warn] Failed to get conda environments: {e}")
+        # フォールバック: ディレクトリスキャンで環境を探す
+        if is_windows and not envs:
+            debug_print("No environments found using conda command. Attempting directory scan...")
+            # 一般的なAnaconda/Condaのディレクトリ構造から環境を検出
+            common_conda_base_dirs = [
+                os.path.join(os.environ.get("USERPROFILE", ""), "anaconda3"),
+                os.path.join(os.environ.get("USERPROFILE", ""), "Anaconda3"),
+                os.path.join(os.environ.get("USERPROFILE", ""), "miniconda3"),
+                os.path.join(os.environ.get("USERPROFILE", ""), "Miniconda3"),
+                os.path.join(os.environ.get("LOCALAPPDATA", ""), "anaconda3"),
+                os.path.join(os.environ.get("LOCALAPPDATA", ""), "Anaconda3"),
+            ]
+            
+            for base_dir in common_conda_base_dirs:
+                if os.path.exists(base_dir):
+                    debug_print(f"Found potential conda base directory: {base_dir}")
+                    
+                    # ベース環境
+                    base_python = os.path.join(base_dir, "python.exe")
+                    if os.path.exists(base_python):
+                        envs.append(base_dir)
+                        debug_print(f"Added base environment: {base_dir}")
+                    
+                    # envs ディレクトリ内の環境
+                    envs_dir = os.path.join(base_dir, "envs")
+                    if os.path.exists(envs_dir):
+                        debug_print(f"Checking for environments in: {envs_dir}")
+                        try:
+                            for env_name in os.listdir(envs_dir):
+                                env_path = os.path.join(envs_dir, env_name)
+                                env_python = os.path.join(env_path, "python.exe")
+                                if os.path.isdir(env_path) and os.path.exists(env_python):
+                                    envs.append(env_path)
+                                    debug_print(f"Added environment: {env_path} (name: {env_name})")
+                        except Exception as e:
+                            error_print(f"Error listing environments directory: {e}")
+            
+            if envs:
+                debug_print(f"Found {len(envs)} conda environments from directory scanning")
+            else:
+                # それでも見つからない場合は、現在のPythonだけを使用
+                debug_print("No environments found. Using current Python as last resort.")
+                import sys
+                current_env = os.path.dirname(sys.executable)
+                envs = [current_env]
+                debug_print(f"Using current environment: {current_env}")
+        
+        for env_path in envs:
+            if is_windows:
+                python_path = str(Path(env_path) / "python.exe")
+            else:
+                python_path = str(Path(env_path) / "bin" / "python")
+            
+            debug_print(f"Checking Python at: {python_path}")
+            if not os.path.exists(python_path):
+                debug_print(f"Python executable not found at: {python_path}")
+                continue
+            
+            try:
+                version = subprocess.check_output(
+                    [python_path, "--version"], universal_newlines=True
+                ).strip().split()[1]
+                
+                # 環境名を適切に抽出
+                if "envs" in str(env_path):
+                    # パスの中でenvsが見つかる場合、その次の部分を環境名として使用
+                    path_parts = Path(env_path).parts
+                    try:
+                        idx = list(map(str.lower, path_parts)).index("envs")
+                        if idx + 1 < len(path_parts):
+                            env_name = f"conda: {path_parts[idx + 1]}"
+                        else:
+                            env_name = "conda: " + Path(env_path).name
+                    except ValueError:
+                        env_name = "conda: " + Path(env_path).name
+                else:
+                    # envs を含まないが conda パスの場合はbase環境
+                    if any(x in str(env_path).lower() for x in ["anaconda", "miniconda", "conda"]):
+                        env_name = "conda: base"
+                    else:
+                        env_name = Path(env_path).name
+                
+                label = f"Python {version} ({env_name})"
+                interpreters[label] = python_path
+                debug_print(f"Added interpreter: {label} -> {python_path}")
+            except Exception as e:
+                error_print(f"Failed to get Python version for {python_path}: {e}")
+                continue
+
         interpreter_cache = interpreters
         return interpreters
 
@@ -697,3 +856,81 @@ class ScriptRunnerWidget(QWidget):
                 os.kill(pid, signal.SIGKILL)
             except:
                 pass
+
+    def get_current_env_name(self):
+        """
+        現在の実行環境の名前を取得する
+        
+        Returns:
+            str: 環境名 (例: "base", "conda: myenv", "venv" など)
+        """
+        import sys
+        import os
+        from pathlib import Path
+        
+        # デフォルト値
+        env_name = "system"
+        
+        try:
+            # Condaの環境変数から環境名を取得
+            conda_default_env = os.environ.get("CONDA_DEFAULT_ENV")
+            if conda_default_env:
+                if conda_default_env == "base":
+                    env_name = "conda: base"
+                else:
+                    env_name = f"conda: {conda_default_env}"
+            else:
+                # 実行パスからの推定
+                py_path = sys.executable
+                path_parts = Path(py_path).parts
+                
+                # Anaconda/Miniconda検出
+                anaconda_indicators = ["anaconda", "miniconda", "conda"]
+                if any(indicator in str(py_path).lower() for indicator in anaconda_indicators):
+                    if "envs" in path_parts:
+                        # パスがenvs/環境名を含む場合
+                        try:
+                            idx = list(map(str.lower, path_parts)).index("envs")
+                            if idx + 1 < len(path_parts):
+                                env_name = f"conda: {path_parts[idx + 1]}"
+                            else:
+                                env_name = "conda: unknown"
+                        except ValueError:
+                            env_name = "conda: unknown"
+                    else:
+                        # envs を含まないが anaconda/miniconda にある場合は base 環境
+                        env_name = "conda: base"
+                # 仮想環境検出
+                elif "venv" in path_parts or "virtualenv" in path_parts:
+                    # venvの名前を抽出
+                    for i, part in enumerate(path_parts):
+                        if part.lower() == "venv" or part.lower() == "virtualenv":
+                            if i > 0:
+                                venv_name = path_parts[i-1]
+                                env_name = f"venv: {venv_name}"
+                            else:
+                                env_name = "venv"
+                            break
+                # Pythonインストール環境検出
+                elif "python" in str(py_path).lower():
+                    if os.name == "nt":  # Windows
+                        if "windows" in str(py_path).lower():
+                            env_name = "system"
+                        elif "program files" in str(py_path).lower():
+                            env_name = "system"
+                        elif "appdata" in str(py_path).lower():
+                            env_name = "user"
+                    else:  # Unix-like
+                        if "/usr/bin" in str(py_path):
+                            env_name = "system"
+                        elif "/usr/local" in str(py_path):
+                            env_name = "local"
+                        elif "/opt" in str(py_path):
+                            env_name = "optional"
+                        elif str(Path.home()) in str(py_path):
+                            env_name = "user"
+        except Exception as e:
+            debug_print(f"Error determining environment name: {e}")
+            env_name = "unknown"
+            
+        return env_name
