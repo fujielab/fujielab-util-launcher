@@ -145,6 +145,7 @@ class MainWindow(QMainWindow):
             # MacOSではグローバルメニューバーを使用
             self.tool_bar = None
         else:
+            
             # MacOS以外ではカスタムツールバーを使用してメニューを作成
             self.tool_bar = QToolBar(tr("Main Menu"), self)
             self.tool_bar.setMovable(False)  # 移動できないように設定
@@ -520,13 +521,11 @@ class MainWindow(QMainWindow):
         super().resizeEvent(event)
 
         if not self.is_macos and self.tool_bar:
-            # ツールバーのサイズをウィンドウに合わせる
-            self.tool_bar.setMinimumWidth(self.width())
+            # ツールバーの最大幅のみをウィンドウ幅に合わせる
             self.tool_bar.setMaximumWidth(self.width())
 
-        # メニューバーのサイズも調整（MacOSでは自動的に処理される）
+        # メニューバーも同様に最大幅のみを設定
         if not self.is_macos:
-            self.menu_bar.setMinimumWidth(self.width())
             self.menu_bar.setMaximumWidth(self.width())
 
         self.saveAllLaunchers()
