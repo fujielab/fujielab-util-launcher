@@ -46,7 +46,7 @@ class ScriptRunnerWidget(QWidget):
             interp_map = self.get_interpreters()
             if not interp_map:
                 # もしインタープリタが見つからない場合、現在の実行環境を追加
-                debug_print("No interpreters found, using current Python as fallback")
+                debug_print("[debug] No interpreters found, using current Python as fallback")
                 import sys
                 import os
                 # 環境名を正確に取得
@@ -191,7 +191,7 @@ class ScriptRunnerWidget(QWidget):
                     # 仮想環境と思われる場合
                     env_name = "venv"
         except Exception as e:
-            debug_print(f"Error determining environment name: {e}")
+            debug_print(f"[debug] Error determining environment name: {e}")
 
         fallback_label = f"Python {sys.version.split()[0]} ({env_name})"
         fallback_path = sys.executable
@@ -202,18 +202,18 @@ class ScriptRunnerWidget(QWidget):
         
         if is_windows:
             # Windows環境の詳細情報を取得
-            debug_print(f"Windows version: {platform.version()}")
-            debug_print(f"Windows release: {platform.release()}")
-            debug_print(f"Python executable: {sys.executable}")
+            debug_print(f"[debug] Windows version: {platform.version()}")
+            debug_print(f"[debug] Windows release: {platform.release()}")
+            debug_print(f"[debug] Python executable: {sys.executable}")
             # 環境変数PATHの内容を表示
             path_entries = os.environ.get('PATH', '').split(';')
-            debug_print(f"PATH environment variable entries:")
+            debug_print(f"[debug] PATH environment variable entries:")
             for entry in path_entries:
-                debug_print(f"  - {entry}")
+                debug_print(f"[debug]   - {entry}")
             # PYTHONPATHの内容を表示
-            debug_print(f"PYTHONPATH: {os.environ.get('PYTHONPATH', '')}")
+            debug_print(f"[debug] PYTHONPATH: {os.environ.get('PYTHONPATH', '')}")
             # 現在のワーキングディレクトリを表示
-            debug_print(f"Current working directory: {os.getcwd()}")
+            debug_print(f"[debug] Current working directory: {os.getcwd()}")
             # conda関連の環境変数を確認
             for env_var in ['CONDA_PREFIX', 'CONDA_PYTHON_EXE', 'CONDA_EXE', 'CONDA_SHLVL', 'CONDA_DEFAULT_ENV']:
                 value = os.environ.get(env_var, 'Not set')
@@ -228,7 +228,7 @@ class ScriptRunnerWidget(QWidget):
                 python_cmd = "python3"
                 where_cmd = "which"
                 
-            debug_print(f"Looking for system Python using {python_cmd}")
+            debug_print(f"[debug] Looking for system Python using {python_cmd}")
             try:
                 sys_version = subprocess.check_output(
                     [python_cmd, "--version"], universal_newlines=True
@@ -254,7 +254,7 @@ class ScriptRunnerWidget(QWidget):
                         [where_cmd, python_cmd], universal_newlines=True
                     ).strip()
                 
-                debug_print(f"Found system Python at: {sys_path}")
+                debug_print(f"[debug] Found system Python at: {sys_path}")
                 
                 # システムPythonの適切な表示名を決定
                 if is_windows:
@@ -299,12 +299,12 @@ class ScriptRunnerWidget(QWidget):
                 # On Windows, check if conda is in PATH
                 conda_path = shutil.which("conda")
                 conda_exists = conda_path is not None
-                debug_print(f"Conda in PATH: {conda_exists}, Path: {conda_path}")
+                debug_print(f"[debug] Conda in PATH: {conda_exists}, Path: {conda_path}")
                 
                 # On Windows, conda.BAT is often found but causes problems
                 # Try to find the actual conda.exe instead
                 if conda_exists and conda_path.lower().endswith('.bat'):
-                    debug_print(f"Found conda.BAT, will try to find the actual conda.exe instead")
+                    debug_print(f"[debug] Found conda.BAT, will try to find the actual conda.exe instead")
                     # Try to locate conda.exe based on conda.BAT location
                     bat_path = Path(conda_path)
                     # condabin/conda.BAT usually points to ../Scripts/conda.exe
@@ -312,13 +312,13 @@ class ScriptRunnerWidget(QWidget):
                         possible_conda_exe = bat_path.parent.parent / "Scripts" / "conda.exe"
                         if possible_conda_exe.exists():
                             conda_cmd = str(possible_conda_exe)
-                            debug_print(f"Found conda.exe at: {conda_cmd}")
+                            debug_print(f"[debug] Found conda.exe at: {conda_cmd}")
                         else:
                             # Or it might be in the Library/bin directory
                             possible_conda_exe = bat_path.parent.parent / "Library" / "bin" / "conda.exe"
                             if possible_conda_exe.exists():
                                 conda_cmd = str(possible_conda_exe)
-                                debug_print(f"Found conda.exe at: {conda_cmd}")
+                                debug_print(f"[debug] Found conda.exe at: {conda_cmd}")
                 
                 # If we still have conda.BAT or couldn't find it, try common locations
                 if not conda_exists or conda_cmd.lower().endswith('.bat'):
@@ -334,11 +334,11 @@ class ScriptRunnerWidget(QWidget):
                         Path(os.environ.get("USERPROFILE", "")) / "anaconda3" / "Scripts" / "conda.exe",
                     ]
                     for path in possible_paths:
-                        debug_print(f"Checking conda at: {path}")
+                        debug_print(f"[debug] Checking conda at: {path}")
                         if path.exists():
                             conda_cmd = str(path)
                             conda_exists = True
-                            debug_print(f"Found conda at: {conda_cmd}")
+                            debug_print(f"[debug] Found conda at: {conda_cmd}")
                             break
                             
                 # conda.exeが見つからなかった場合は別の方法を試す
@@ -352,11 +352,11 @@ class ScriptRunnerWidget(QWidget):
                         python_path.parent.parent / "Scripts" / "conda.exe",
                     ]
                     for path in possible_conda_paths:
-                        debug_print(f"Checking conda at: {path}")
+                        debug_print(f"[debug] Checking conda at: {path}")
                         if path.exists():
                             conda_cmd = str(path)
                             conda_exists = True
-                            debug_print(f"Found conda at: {conda_cmd}")
+                            debug_print(f"[debug] Found conda at: {conda_cmd}")
                             break
                 
                 if not conda_exists:
@@ -364,30 +364,30 @@ class ScriptRunnerWidget(QWidget):
                     error_print(f"PATH: {os.environ.get('PATH', '')}")
                     raise FileNotFoundError("Conda command not found in PATH or common locations")
 
-            debug_print(f"Running conda command: {conda_cmd} info --json")
+            debug_print(f"[debug] Running conda command: {conda_cmd} info --json")
             # Windowsの場合、複数の方法を試す
             envs = []
             
             if is_windows:
                 # 方法1: conda.exeを直接実行
                 try:
-                    debug_print("Trying direct execution of conda.exe")
+                    debug_print("[debug] Trying direct execution of conda.exe")
                     output = subprocess.check_output([conda_cmd, "info", "--json"], universal_newlines=True)
-                    debug_print(f"Conda info output length: {len(output)}")
+                    debug_print(f"[debug] Conda info output length: {len(output)}")
                     info = json.loads(output)
                     envs = info.get("envs", [])
-                    debug_print(f"Found {len(envs)} conda environments")
+                    debug_print(f"[debug] Found {len(envs)} conda environments")
                 except Exception as e:
                     error_print(f"Direct conda execution failed: {e}")
                     
                     # 方法2: shellを使用して実行
                     if not envs:
                         try:
-                            debug_print("Trying to run conda with shell=True")
+                            debug_print("[debug] Trying to run conda with shell=True")
                             output = subprocess.check_output(f'"{conda_cmd}" info --json', shell=True, universal_newlines=True)
                             info = json.loads(output)
                             envs = info.get("envs", [])
-                            debug_print(f"Found {len(envs)} conda environments using shell=True")
+                            debug_print(f"[debug] Found {len(envs)} conda environments using shell=True")
                         except Exception as e2:
                             error_print(f"Shell conda execution failed: {e2}")
                     
@@ -407,7 +407,7 @@ class ScriptRunnerWidget(QWidget):
                     if not envs:
                         try:
                             # 環境変数を調整して実行
-                            debug_print("Trying to run conda with modified PATH")
+                            debug_print("[debug] Trying to run conda with modified PATH")
                             env_copy = os.environ.copy()
                             conda_dir = str(Path(conda_cmd).parent)
                             env_copy['PATH'] = f"{conda_dir};{env_copy.get('PATH', '')}"
@@ -415,25 +415,25 @@ class ScriptRunnerWidget(QWidget):
                                                           env=env_copy, universal_newlines=True)
                             info = json.loads(output)
                             envs = info.get("envs", [])
-                            debug_print(f"Found {len(envs)} conda environments with modified PATH")
+                            debug_print(f"[debug] Found {len(envs)} conda environments with modified PATH")
                         except Exception as e4:
                             error_print(f"Modified PATH conda execution failed: {e4}")
                             
                     # 最終手段: フォールバックとして現在の環境だけを追加
                     if not envs:
-                        debug_print("All conda methods failed. Using current environment as fallback.")
+                        debug_print("[debug] All conda methods failed. Using current environment as fallback.")
                         import sys
                         current_env = os.path.dirname(sys.executable)
                         envs = [current_env]
-                        debug_print(f"Using current environment: {current_env}")
+                        debug_print(f"[debug] Using current environment: {current_env}")
             else:
                 # 非Windows環境でのconda実行
                 try:
                     output = subprocess.check_output([conda_cmd, "info", "--json"], universal_newlines=True)
-                    debug_print(f"Conda info output length: {len(output)}")
+                    debug_print(f"[debug] Conda info output length: {len(output)}")
                     info = json.loads(output)
                     envs = info.get("envs", [])
-                    debug_print(f"Found {len(envs)} conda environments")
+                    debug_print(f"[debug] Found {len(envs)} conda environments")
                 except Exception as e:
                     error_print(f"Error executing conda: {e}")
                     raise
@@ -443,10 +443,10 @@ class ScriptRunnerWidget(QWidget):
                     python_path = str(Path(env_path) / "python.exe")
                 else:
                     python_path = str(Path(env_path) / "bin" / "python")
-                
-                debug_print(f"Checking Python at: {python_path}")
+
+                debug_print(f"[debug] Checking Python at: {python_path}")
                 if not os.path.exists(python_path):
-                    debug_print(f"Python executable not found at: {python_path}")
+                    debug_print(f"[debug] Python executable not found at: {python_path}")
                     continue
                     
                 try:
@@ -475,7 +475,7 @@ class ScriptRunnerWidget(QWidget):
                     
                     label = f"Python {version} ({env_name})"
                     interpreters[label] = python_path
-                    debug_print(f"Added interpreter: {label} -> {python_path}")
+                    debug_print(f"[debug] Added interpreter: {label} -> {python_path}")
                 except Exception as e:
                     error_print(f"Failed to get Python version for {python_path}: {e}")
                     continue
@@ -483,7 +483,7 @@ class ScriptRunnerWidget(QWidget):
             error_print(f"[warn] Failed to get conda environments: {e}")
         # フォールバック: ディレクトリスキャンで環境を探す
         if is_windows and not envs:
-            debug_print("No environments found using conda command. Attempting directory scan...")
+            debug_print("[debug] No environments found using conda command. Attempting directory scan...")
             # 一般的なAnaconda/Condaのディレクトリ構造から環境を検出
             common_conda_base_dirs = [
                 os.path.join(os.environ.get("USERPROFILE", ""), "anaconda3"),
@@ -496,47 +496,47 @@ class ScriptRunnerWidget(QWidget):
             
             for base_dir in common_conda_base_dirs:
                 if os.path.exists(base_dir):
-                    debug_print(f"Found potential conda base directory: {base_dir}")
-                    
+                    debug_print(f"[debug] Found potential conda base directory: {base_dir}")
+
                     # ベース環境
                     base_python = os.path.join(base_dir, "python.exe")
                     if os.path.exists(base_python):
                         envs.append(base_dir)
-                        debug_print(f"Added base environment: {base_dir}")
-                    
+                        debug_print(f"[debug] Added base environment: {base_dir}")
+
                     # envs ディレクトリ内の環境
                     envs_dir = os.path.join(base_dir, "envs")
                     if os.path.exists(envs_dir):
-                        debug_print(f"Checking for environments in: {envs_dir}")
+                        debug_print(f"[debug] Checking for environments in: {envs_dir}")
                         try:
                             for env_name in os.listdir(envs_dir):
                                 env_path = os.path.join(envs_dir, env_name)
                                 env_python = os.path.join(env_path, "python.exe")
                                 if os.path.isdir(env_path) and os.path.exists(env_python):
                                     envs.append(env_path)
-                                    debug_print(f"Added environment: {env_path} (name: {env_name})")
+                                    debug_print(f"[debug] Added environment: {env_path} (name: {env_name})")
                         except Exception as e:
                             error_print(f"Error listing environments directory: {e}")
             
             if envs:
-                debug_print(f"Found {len(envs)} conda environments from directory scanning")
+                debug_print(f"[debug] Found {len(envs)} conda environments from directory scanning")
             else:
                 # それでも見つからない場合は、現在のPythonだけを使用
-                debug_print("No environments found. Using current Python as last resort.")
+                debug_print("[debug] No environments found. Using current Python as last resort.")
                 import sys
                 current_env = os.path.dirname(sys.executable)
                 envs = [current_env]
-                debug_print(f"Using current environment: {current_env}")
-        
+                debug_print(f"[debug] Using current environment: {current_env}")
+
         for env_path in envs:
             if is_windows:
                 python_path = str(Path(env_path) / "python.exe")
             else:
                 python_path = str(Path(env_path) / "bin" / "python")
-            
-            debug_print(f"Checking Python at: {python_path}")
+
+            debug_print(f"[debug] Checking Python at: {python_path}")
             if not os.path.exists(python_path):
-                debug_print(f"Python executable not found at: {python_path}")
+                debug_print(f"[debug] Python executable not found at: {python_path}")
                 continue
             
             try:
@@ -565,7 +565,7 @@ class ScriptRunnerWidget(QWidget):
                 
                 label = f"Python {version} ({env_name})"
                 interpreters[label] = python_path
-                debug_print(f"Added interpreter: {label} -> {python_path}")
+                debug_print(f"[debug] Added interpreter: {label} -> {python_path}")
             except Exception as e:
                 error_print(f"Failed to get Python version for {python_path}: {e}")
                 continue
@@ -930,7 +930,7 @@ class ScriptRunnerWidget(QWidget):
                         elif str(Path.home()) in str(py_path):
                             env_name = "user"
         except Exception as e:
-            debug_print(f"Error determining environment name: {e}")
+            debug_print(f"[debug] Error determining environment name: {e}")
             env_name = "unknown"
             
         return env_name

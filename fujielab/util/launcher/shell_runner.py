@@ -282,7 +282,7 @@ class ShellRunnerWidget(QWidget):
         except Exception as e:
             error_text = f"Decode error: {e}"
             self.output_view.append(f"<span style='color:red;'>{error_text}</span>")
-            debug_print(f"{'StdErr' if is_stderr else 'StdOut'} decode error: {e}")
+            debug_print(f"[debug] {'StdErr' if is_stderr else 'StdOut'} decode error: {e}")
 
     def handle_stdout(self):
         data = self.process.readAllStandardOutput()
