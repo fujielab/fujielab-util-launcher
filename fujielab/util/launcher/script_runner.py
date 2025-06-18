@@ -1,3 +1,4 @@
+import os
 from PyQt5.QtWidgets import QWidget, QTextEdit, QLabel, QLineEdit, QPushButton, QHBoxLayout, QFormLayout, QVBoxLayout, QSizePolicy, QComboBox, QFileDialog, QGridLayout
 from PyQt5.QtCore import QProcess, Qt
 import shlex
@@ -165,7 +166,28 @@ class ScriptRunnerWidget(QWidget):
         except Exception as e:
             error_print(f"[warn] Failed to get system Python: {e}")
         try:
-            output = subprocess.check_output(["conda", "info", "--json"], universal_newlines=True)
+            # Check if conda command exists before running
+            import shutil
+            conda_cmd = "conda"
+            if is_windows:
+                # On Windows, check if conda is in PATH
+                conda_exists = shutil.which("conda") is not None
+                # Also try common installation locations if not found in PATH
+                if not conda_exists:
+                    possible_paths = [
+                        Path(os.environ.get("USERPROFILE", "")) / "Anaconda3" / "Scripts" / "conda.exe",
+                        Path(os.environ.get("USERPROFILE", "")) / "Miniconda3" / "Scripts" / "conda.exe",
+                        Path(os.environ.get("ProgramData", "")) / "Anaconda3" / "Scripts" / "conda.exe",
+                    ]
+                    for path in possible_paths:
+                        if path.exists():
+                            conda_cmd = str(path)
+                            conda_exists = True
+                            break
+                if not conda_exists:
+                    raise FileNotFoundError("Conda command not found in PATH or common locations")
+
+            output = subprocess.check_output([conda_cmd, "info", "--json"], universal_newlines=True)
             info = json.loads(output)
             envs = info.get("envs", [])
             for env_path in envs:
