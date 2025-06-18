@@ -147,22 +147,52 @@ class ScriptRunnerWidget(QWidget):
         import platform
         is_windows = platform.system() == "Windows"
         try:
+            # システムPythonを取得
             if is_windows:
-                sys_version = subprocess.check_output(
-                    ["python", "--version"], universal_newlines=True
-                ).strip().split()[1]
-                sys_path = subprocess.check_output(
-                    ["where", "python"], universal_newlines=True
-                ).strip().split("\n")[0]
+                python_cmd = "python"
+                where_cmd = "where"
             else:
+                python_cmd = "python3"
+                where_cmd = "which"
+                
+            debug_print(f"Looking for system Python using {python_cmd}")
+            try:
                 sys_version = subprocess.check_output(
-                    ["python3", "--version"], universal_newlines=True
-                ).strip().split()[1]
-                sys_path = subprocess.check_output(
-                    ["which", "python3"], universal_newlines=True
+                    [python_cmd, "--version"], universal_newlines=True
                 ).strip()
-            label = f"Python {sys_version} (system)"
-            interpreters[label] = sys_path
+                debug_print(f"System Python version command output: {sys_version}")
+                sys_version = sys_version.split()[1]  # "Python 3.9.5" -> "3.9.5"
+                
+                # Windows環境ではwhereコマンドを使用してPythonのパスを取得
+                if is_windows:
+                    try:
+                        sys_path = subprocess.check_output(
+                            [where_cmd, python_cmd], universal_newlines=True
+                        ).strip().split("\n")[0]
+                    except subprocess.SubprocessError:
+                        # whereコマンドが失敗した場合はshutilを使用
+                        import shutil
+                        sys_path = shutil.which(python_cmd)
+                        if not sys_path:
+                            error_print(f"Could not find system Python path using {where_cmd} or shutil.which")
+                            raise FileNotFoundError(f"Python path not found")
+                else:
+                    sys_path = subprocess.check_output(
+                        [where_cmd, python_cmd], universal_newlines=True
+                    ).strip()
+                
+                debug_print(f"Found system Python at: {sys_path}")
+                label = f"Python {sys_version} (system)"
+                interpreters[label] = sys_path
+            except Exception as e:
+                error_print(f"Error getting system Python version: {e}")
+                # バックアップとして、実行中のPythonを使用
+                import sys
+                sys_path = sys.executable
+                sys_version = '.'.join(map(str, sys.version_info[:3]))
+                debug_print(f"Using current Python as fallback: {sys_path}, version {sys_version}")
+                label = f"Python {sys_version} (current)"
+                interpreters[label] = sys_path
         except Exception as e:
             error_print(f"[warn] Failed to get system Python: {e}")
         try:
@@ -171,30 +201,69 @@ class ScriptRunnerWidget(QWidget):
             conda_cmd = "conda"
             if is_windows:
                 # On Windows, check if conda is in PATH
-                conda_exists = shutil.which("conda") is not None
+                conda_path = shutil.which("conda")
+                conda_exists = conda_path is not None
+                debug_print(f"Conda in PATH: {conda_exists}, Path: {conda_path}")
+                
                 # Also try common installation locations if not found in PATH
                 if not conda_exists:
                     possible_paths = [
                         Path(os.environ.get("USERPROFILE", "")) / "Anaconda3" / "Scripts" / "conda.exe",
                         Path(os.environ.get("USERPROFILE", "")) / "Miniconda3" / "Scripts" / "conda.exe",
                         Path(os.environ.get("ProgramData", "")) / "Anaconda3" / "Scripts" / "conda.exe",
+                        Path(os.environ.get("USERPROFILE", "")) / "AppData" / "Local" / "anaconda3" / "Scripts" / "conda.exe",
+                        Path(os.environ.get("USERPROFILE", "")) / "AppData" / "Local" / "miniconda3" / "Scripts" / "conda.exe",
+                        Path(os.environ.get("LOCALAPPDATA", "")) / "Continuum" / "anaconda3" / "Scripts" / "conda.exe",
+                        Path(os.environ.get("LOCALAPPDATA", "")) / "Continuum" / "miniconda3" / "Scripts" / "conda.exe",
                     ]
                     for path in possible_paths:
+                        debug_print(f"Checking conda at: {path}")
                         if path.exists():
                             conda_cmd = str(path)
                             conda_exists = True
+                            debug_print(f"Found conda at: {conda_cmd}")
                             break
+                
                 if not conda_exists:
+                    error_print("Conda command not found in PATH or common locations")
+                    error_print(f"PATH: {os.environ.get('PATH', '')}")
                     raise FileNotFoundError("Conda command not found in PATH or common locations")
 
-            output = subprocess.check_output([conda_cmd, "info", "--json"], universal_newlines=True)
-            info = json.loads(output)
-            envs = info.get("envs", [])
+            debug_print(f"Running conda command: {conda_cmd} info --json")
+            try:
+                output = subprocess.check_output([conda_cmd, "info", "--json"], universal_newlines=True)
+                debug_print(f"Conda info output length: {len(output)}")
+                info = json.loads(output)
+                envs = info.get("envs", [])
+                debug_print(f"Found {len(envs)} conda environments")
+            except subprocess.SubprocessError as se:
+                error_print(f"Error executing conda: {se}")
+                # Try a different approach on Windows
+                if is_windows:
+                    try:
+                        # Try running through shell explicitly
+                        debug_print("Trying to run conda with shell=True")
+                        output = subprocess.check_output(f'"{conda_cmd}" info --json', shell=True, universal_newlines=True)
+                        info = json.loads(output)
+                        envs = info.get("envs", [])
+                        debug_print(f"Found {len(envs)} conda environments using shell=True")
+                    except Exception as e2:
+                        error_print(f"Second attempt to execute conda failed: {e2}")
+                        raise
+                else:
+                    raise
+            
             for env_path in envs:
                 if is_windows:
                     python_path = str(Path(env_path) / "python.exe")
                 else:
                     python_path = str(Path(env_path) / "bin" / "python")
+                
+                debug_print(f"Checking Python at: {python_path}")
+                if not os.path.exists(python_path):
+                    debug_print(f"Python executable not found at: {python_path}")
+                    continue
+                    
                 try:
                     version = subprocess.check_output(
                         [python_path, "--version"], universal_newlines=True
@@ -202,7 +271,9 @@ class ScriptRunnerWidget(QWidget):
                     env_name = Path(env_path).name
                     label = f"Python {version} (conda: {env_name})"
                     interpreters[label] = python_path
-                except Exception:
+                    debug_print(f"Added interpreter: {label} -> {python_path}")
+                except Exception as e:
+                    error_print(f"Failed to get Python version for {python_path}: {e}")
                     continue
         except Exception as e:
             error_print(f"[warn] Failed to get conda environments: {e}")

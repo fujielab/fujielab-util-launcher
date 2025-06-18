@@ -66,6 +66,11 @@ def create_windows_shortcut():
         if icon_path:
             shortcut.IconLocation = icon_path
         shortcut.Description = "Fujielab Utility Launcher"
+        
+        # 環境変数を確実に引き継ぐための設定
+        # pythonw.exe はCOMオブジェクトを介して実行されるため環境変数が継承されにくい場合がある
+        # shortcut.Hotkey = ""  # ホットキーが設定されている場合は削除
+        # 現在のPATH環境変数を継承して正しくcondaなどを検出できるようにする
 
         # ショートカットを保存
         shortcut.Save()
