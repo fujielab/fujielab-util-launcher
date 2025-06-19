@@ -80,6 +80,9 @@ class ShellRunnerWidget(QWidget):
         self.setLayout(layout)
         self.config_changed_callback = None
 
+        # プログラムは起動していない状態でUIを初期化
+        self.update_ui_state(running=False)
+
     def on_cmdline_changed(self, text):
         self.program_cmdline = text
         if self.config_changed_callback:
@@ -138,6 +141,15 @@ class ShellRunnerWidget(QWidget):
             self.input_line.clear()
         else:
             self.output_view.append("<span style='color:red;'>プロセスが起動していません</span>")
+
+    def update_ui_state(self, running: bool):
+        """Enable or disable widgets depending on running state."""
+        self.run_button.setEnabled(not running)
+        self.stop_button.setEnabled(running)
+        self.dir_select_button.setEnabled(not running)
+        if self.is_windows:
+            self.exe_select_button.setEnabled(not running)
+        self.input_line.setEnabled(running)
 
     def run_program(self):
         self.output_view.append("[debug] run_program called")
@@ -204,6 +216,7 @@ class ShellRunnerWidget(QWidget):
         self.process.errorOccurred.connect(self.handle_process_error)
         self.output_view.append(tr("Starting program..."))
         self.process.start()
+        self.update_ui_state(running=True)
 
     def handle_process_error(self, error):
         self.output_view.append(f"<span style='color:red;'>QProcessエラー: {error}</span>")
@@ -294,6 +307,7 @@ class ShellRunnerWidget(QWidget):
 
     def process_finished(self):
         self.output_view.append(tr("Program finished"))
+        self.update_ui_state(running=False)
 
     def _parse_exe_command(self, command):
         """コマンドライン文字列をEXEパスと引数に分割する

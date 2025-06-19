@@ -142,6 +142,9 @@ class ScriptRunnerWidget(QWidget):
         self.dir_select_button.clicked.connect(self.select_dir)
         self.args_value.textChanged.connect(self.on_args_changed)
 
+        # 初期状態では実行されていないためUIを更新
+        self.update_ui_state(running=False)
+
     def on_interpreter_changed(self):
         label = self.interpreter_combo.currentText()
         self.interpreter_path = self.interpreter_map.get(label, "python")
@@ -159,6 +162,15 @@ class ScriptRunnerWidget(QWidget):
             self.input_line.clear()
         else:
             self.output_view.append("<span style='color:red;'>プロセスが起動していません</span>")
+
+    def update_ui_state(self, running: bool):
+        """Enable or disable widgets depending on running state."""
+        self.run_button.setEnabled(not running)
+        self.stop_button.setEnabled(running)
+        self.script_select_button.setEnabled(not running)
+        self.dir_select_button.setEnabled(not running)
+        self.interpreter_combo.setEnabled(not running)
+        self.input_line.setEnabled(running)
 
     def get_interpreters(self, force_refresh=False):
         global interpreter_cache
@@ -647,6 +659,7 @@ class ScriptRunnerWidget(QWidget):
         self.output_view.clear()
         self.output_view.append(tr("Starting script..."))
         self.process.start()
+        self.update_ui_state(running=True)
 
     def handle_process_error(self, error):
         self.output_view.append(f"<span style='color:red;'>QProcessエラー: {error}</span>")
@@ -762,6 +775,7 @@ class ScriptRunnerWidget(QWidget):
             self.stderr_buffer = ""
 
         self.output_view.append(tr("Script finished"))
+        self.update_ui_state(running=False)
 
     def select_script(self):
         default_dir = self.working_dir or str(Path.cwd())
