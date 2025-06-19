@@ -216,8 +216,9 @@ class ShellRunnerWidget(QWidget):
         self.output_view.clear()
         self.process.errorOccurred.connect(self.handle_process_error)
         self.output_view.append(tr("Starting program..."))
-        self.process.start()
+        # Disable controls before starting so failed starts restore the UI
         self.update_ui_state(running=True)
+        self.process.start()
 
     def handle_process_error(self, error):
         self.output_view.append(f"<span style='color:red;'>QProcessエラー: {error}</span>")

@@ -659,8 +659,10 @@ class ScriptRunnerWidget(QWidget):
         self.stderr_buffer = ""
         self.output_view.clear()
         self.output_view.append(tr("Starting script..."))
-        self.process.start()
+        # Disable controls *before* starting. If the process fails to start,
+        # the error signal may fire immediately and re-enable the UI.
         self.update_ui_state(running=True)
+        self.process.start()
 
     def handle_process_error(self, error):
         self.output_view.append(f"<span style='color:red;'>QProcessエラー: {error}</span>")
