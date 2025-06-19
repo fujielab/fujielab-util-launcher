@@ -652,6 +652,7 @@ class ScriptRunnerWidget(QWidget):
         self.process.readyReadStandardError.connect(self.handle_stderr)
         self.process.finished.connect(self.process_finished)
         self.process.errorOccurred.connect(self.handle_process_error)
+        self.process.stateChanged.connect(self.handle_state_changed)
 
         # バッファをクリア
         self.stdout_buffer = ""
@@ -665,6 +666,12 @@ class ScriptRunnerWidget(QWidget):
         self.output_view.append(f"<span style='color:red;'>QProcessエラー: {error}</span>")
         if self.process:
             self.output_view.append(f"詳細: {self.process.errorString()}")
+        # エラー発生時にもUIを復旧させる
+        self.update_ui_state(running=False)
+
+    def handle_state_changed(self, state):
+        """Update UI whenever the process state changes."""
+        self.update_ui_state(state != QProcess.NotRunning)
 
     def stop_script(self):
         if self.process and self.process.state() != QProcess.NotRunning:
