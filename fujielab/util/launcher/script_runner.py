@@ -142,6 +142,9 @@ class ScriptRunnerWidget(QWidget):
         self.dir_select_button.clicked.connect(self.select_dir)
         self.args_value.textChanged.connect(self.on_args_changed)
 
+        # 初期状態では実行されていないためUIを更新
+        self.update_ui_state(running=False)
+
     def on_interpreter_changed(self):
         label = self.interpreter_combo.currentText()
         self.interpreter_path = self.interpreter_map.get(label, "python")
@@ -159,6 +162,15 @@ class ScriptRunnerWidget(QWidget):
             self.input_line.clear()
         else:
             self.output_view.append("<span style='color:red;'>プロセスが起動していません</span>")
+
+    def update_ui_state(self, running: bool):
+        """Enable or disable widgets depending on running state."""
+        self.run_button.setEnabled(not running)
+        self.stop_button.setEnabled(running)
+        self.script_select_button.setEnabled(not running)
+        self.dir_select_button.setEnabled(not running)
+        self.interpreter_combo.setEnabled(not running)
+        self.input_line.setEnabled(running)
 
     def get_interpreters(self, force_refresh=False):
         global interpreter_cache
@@ -640,18 +652,28 @@ class ScriptRunnerWidget(QWidget):
         self.process.readyReadStandardError.connect(self.handle_stderr)
         self.process.finished.connect(self.process_finished)
         self.process.errorOccurred.connect(self.handle_process_error)
+        self.process.stateChanged.connect(self.handle_state_changed)
 
         # バッファをクリア
         self.stdout_buffer = ""
         self.stderr_buffer = ""
         self.output_view.clear()
         self.output_view.append(tr("Starting script..."))
+        # Disable controls *before* starting. If the process fails to start,
+        # the error signal may fire immediately and re-enable the UI.
+        self.update_ui_state(running=True)
         self.process.start()
 
     def handle_process_error(self, error):
         self.output_view.append(f"<span style='color:red;'>QProcessエラー: {error}</span>")
         if self.process:
             self.output_view.append(f"詳細: {self.process.errorString()}")
+        # エラー発生時にもUIを復旧させる
+        self.update_ui_state(running=False)
+
+    def handle_state_changed(self, state):
+        """Update UI whenever the process state changes."""
+        self.update_ui_state(state != QProcess.NotRunning)
 
     def stop_script(self):
         if self.process and self.process.state() != QProcess.NotRunning:
@@ -762,6 +784,7 @@ class ScriptRunnerWidget(QWidget):
             self.stderr_buffer = ""
 
         self.output_view.append(tr("Script finished"))
+        self.update_ui_state(running=False)
 
     def select_script(self):
         default_dir = self.working_dir or str(Path.cwd())
