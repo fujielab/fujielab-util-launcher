@@ -146,7 +146,7 @@ def main():
 
     # バージョン情報表示
     if args.version:
-        print("Fujielab Utility Launcher v0.2.0")
+        print("Fujielab Utility Launcher v0.2.1")
         return 0
 
     # Windows専用: デスクトップにショートカットを作成
