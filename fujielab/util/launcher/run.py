@@ -16,6 +16,8 @@ from .main_window import MainWindow
 # Windows限定機能がある場合にインポート
 if platform.system() == "Windows":
     from .create_shortcut import create_windows_shortcut
+elif platform.system() == "Darwin":
+    from .create_shortcut import create_macos_shortcut
 
 class FadingSplashScreen(QSplashScreen):
     def __init__(self, pixmap):
@@ -124,10 +126,13 @@ def parse_arguments():
     parser.add_argument('--version', action='store_true',
                         help=tr('Display version information and exit.'))
 
-    # Windows限定オプション
+    # Shortcut creation option for supported OS
     if platform.system() == "Windows":
         parser.add_argument('--create-shortcut', action='store_true',
                         help=tr('Create a shortcut on the Windows Desktop. Windows only.'))
+    elif platform.system() == "Darwin":
+        parser.add_argument('--create-shortcut', action='store_true',
+                        help=tr('Create a shortcut in the Applications folder. macOS only.'))
 
     return parser.parse_args(remaining), known.lang
 
@@ -149,14 +154,15 @@ def main():
         print("Fujielab Utility Launcher v0.2.1")
         return 0
 
-    # Windows専用: デスクトップにショートカットを作成
-    if platform.system() == "Windows" and hasattr(args, 'create_shortcut') and args.create_shortcut:
-        success = create_windows_shortcut()
-        return 0 if success else 1
-
-    # Windows専用: デスクトップにショートカットを作成
-    if platform.system() == "Windows" and hasattr(args, 'create_shortcut') and args.create_shortcut:
-        success = create_windows_shortcut()
+    # Shortcut creation for supported OS
+    if hasattr(args, 'create_shortcut') and args.create_shortcut:
+        if platform.system() == "Windows":
+            success = create_windows_shortcut()
+        elif platform.system() == "Darwin":
+            success = create_macos_shortcut()
+        else:
+            print(tr("Error creating shortcut:"), "Unsupported OS")
+            success = False
         return 0 if success else 1
 
     # 設定ファイルのリセットフラグ
