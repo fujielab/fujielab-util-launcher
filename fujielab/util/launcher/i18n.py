@@ -32,6 +32,9 @@ _translations = {
         'Please install it using: pip install pywin32': 'pip install pywin32 でインストールしてください。',
         'Error: Could not find the Desktop folder.': 'エラー: デスクトップフォルダが見つかりません。',
         'Shortcut created successfully on the Desktop.': 'デスクトップにショートカットを作成しました。',
+        'Create a shortcut in the Applications folder. macOS only.': 'macOSのApplicationsフォルダにショートカットを作成します。macOS専用。',
+        'Error: Could not find the Applications folder.': 'エラー: Applicationsフォルダが見つかりません。',
+        'Shortcut created successfully in the Applications folder.': 'Applicationsフォルダにショートカットを作成しました。',
         'Error creating shortcut:': 'ショートカット作成エラー:',
         
         'File': 'ファイル',

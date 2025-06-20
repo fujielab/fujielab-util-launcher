@@ -80,3 +80,61 @@ def create_windows_shortcut():
     except Exception as e:
         print(tr("Error creating shortcut:"), str(e))
         return False
+
+
+def create_macos_shortcut():
+    """Create an Application bundle in ``~/Applications`` for macOS."""
+    try:
+        from pathlib import Path
+        import shutil
+        import subprocess
+
+        app_dir = Path.home() / "Applications" / "Fujielab Launcher.app"
+        contents = app_dir / "Contents"
+        macos_dir = contents / "MacOS"
+        resources_dir = contents / "Resources"
+
+        if app_dir.exists():
+            shutil.rmtree(app_dir)
+
+        macos_dir.mkdir(parents=True)
+        resources_dir.mkdir(parents=True)
+
+        package_dir = os.path.dirname(os.path.abspath(__file__))
+        icon_png = os.path.join(package_dir, "resources", "icon.png")
+        icon_icns = resources_dir / "icon.icns"
+        if os.path.exists(icon_png):
+            try:
+                subprocess.run([
+                    "sips", "-s", "format", "icns", icon_png,
+                    "--out", str(icon_icns)
+                ], check=True)
+            except Exception:
+                shutil.copy(icon_png, resources_dir / "icon.png")
+
+        info_plist = contents / "Info.plist"
+        plist_content = f"""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\">
+<dict>
+    <key>CFBundleName</key><string>Fujielab Launcher</string>
+    <key>CFBundleIdentifier</key><string>com.fujielab.launcher</string>
+    <key>CFBundleVersion</key><string>1.0</string>
+    <key>CFBundleExecutable</key><string>run.sh</string>
+    <key>CFBundleIconFile</key><string>{icon_icns.name if icon_icns.exists() else 'icon.png'}</string>
+</dict>
+</plist>
+"""
+        with open(info_plist, "w") as f:
+            f.write(plist_content)
+
+        run_sh = macos_dir / "run.sh"
+        with open(run_sh, "w") as f:
+            f.write(f"#!/bin/bash\n\"{sys.executable}\" -m fujielab.util.launcher.run \"$@\"\n")
+        os.chmod(run_sh, 0o755)
+
+        print(tr("Shortcut created successfully in the Applications folder."))
+        return True
+    except Exception as e:
+        print(tr("Error creating shortcut:"), str(e))
+        return False
