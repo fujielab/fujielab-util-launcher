@@ -3,7 +3,8 @@ from PyQt5.QtCore import Qt, QRect
 from .debug_util import debug_print, error_print
 
 STICKY_DIST = 20  # Sticky動作の距離閾値（ピクセル）
-HYSTERESIS = 10   # ヒステリシス（ピクセル）
+HYSTERESIS = 10  # ヒステリシス（ピクセル）
+
 
 class StickyMdiSubWindow(QMdiSubWindow):
     def __init__(self, *args, **kwargs):
@@ -25,7 +26,9 @@ class StickyMdiSubWindow(QMdiSubWindow):
                 self._resize_adjacent_all = self.findAdjacentWindows(resize_dir)
             else:
                 self._dragging = True
-                self._drag_start_pos = event.globalPos() - self.frameGeometry().topLeft()
+                self._drag_start_pos = (
+                    event.globalPos() - self.frameGeometry().topLeft()
+                )
         super().mousePressEvent(event)
 
     def findAdjacentWindows(self, resize_dir):
@@ -40,14 +43,14 @@ class StickyMdiSubWindow(QMdiSubWindow):
             return []
 
         directions = []
-        if 'left' in resize_dir:
-            directions.append('left')
-        if 'right' in resize_dir:
-            directions.append('right')
-        if 'top' in resize_dir:
-            directions.append('top')
-        if 'bottom' in resize_dir:
-            directions.append('bottom')
+        if "left" in resize_dir:
+            directions.append("left")
+        if "right" in resize_dir:
+            directions.append("right")
+        if "top" in resize_dir:
+            directions.append("top")
+        if "bottom" in resize_dir:
+            directions.append("bottom")
 
         def collect(start_dir):
             visited = {(self, start_dir)}
@@ -56,54 +59,66 @@ class StickyMdiSubWindow(QMdiSubWindow):
             while queue:
                 win, cur_dir = queue.pop(0)
                 rect = win.geometry()
-                if cur_dir == 'left':
+                if cur_dir == "left":
                     coord = rect.left()
                     for other in mdi_area.subWindowList():
                         if other is win:
                             continue
                         o_rect = other.geometry()
-                        if abs(coord - o_rect.right()) < STICKY_DIST and \
-                           rect.top() < o_rect.bottom() and rect.bottom() > o_rect.top():
-                            pair = (other, 'right')
+                        if (
+                            abs(coord - o_rect.right()) < STICKY_DIST
+                            and rect.top() < o_rect.bottom()
+                            and rect.bottom() > o_rect.top()
+                        ):
+                            pair = (other, "right")
                             if pair not in visited:
                                 visited.add(pair)
                                 queue.append(pair)
                                 found.append(pair)
-                elif cur_dir == 'right':
+                elif cur_dir == "right":
                     coord = rect.right()
                     for other in mdi_area.subWindowList():
                         if other is win:
                             continue
                         o_rect = other.geometry()
-                        if abs(coord - o_rect.left()) < STICKY_DIST and \
-                           rect.top() < o_rect.bottom() and rect.bottom() > o_rect.top():
-                            pair = (other, 'left')
+                        if (
+                            abs(coord - o_rect.left()) < STICKY_DIST
+                            and rect.top() < o_rect.bottom()
+                            and rect.bottom() > o_rect.top()
+                        ):
+                            pair = (other, "left")
                             if pair not in visited:
                                 visited.add(pair)
                                 queue.append(pair)
                                 found.append(pair)
-                elif cur_dir == 'top':
+                elif cur_dir == "top":
                     coord = rect.top()
                     for other in mdi_area.subWindowList():
                         if other is win:
                             continue
                         o_rect = other.geometry()
-                        if abs(coord - o_rect.bottom()) < STICKY_DIST and \
-                           rect.left() < o_rect.right() and rect.right() > o_rect.left():
-                            pair = (other, 'bottom')
+                        if (
+                            abs(coord - o_rect.bottom()) < STICKY_DIST
+                            and rect.left() < o_rect.right()
+                            and rect.right() > o_rect.left()
+                        ):
+                            pair = (other, "bottom")
                             if pair not in visited:
                                 visited.add(pair)
                                 queue.append(pair)
                                 found.append(pair)
-                elif cur_dir == 'bottom':
+                elif cur_dir == "bottom":
                     coord = rect.bottom()
                     for other in mdi_area.subWindowList():
                         if other is win:
                             continue
                         o_rect = other.geometry()
-                        if abs(coord - o_rect.top()) < STICKY_DIST and \
-                           rect.left() < o_rect.right() and rect.right() > o_rect.left():
-                            pair = (other, 'top')
+                        if (
+                            abs(coord - o_rect.top()) < STICKY_DIST
+                            and rect.left() < o_rect.right()
+                            and rect.right() > o_rect.left()
+                        ):
+                            pair = (other, "top")
                             if pair not in visited:
                                 visited.add(pair)
                                 queue.append(pair)
@@ -134,24 +149,24 @@ class StickyMdiSubWindow(QMdiSubWindow):
         elif self._resizing and self._drag_start_pos:
             diff = event.globalPos() - self._drag_start_pos
             new_geom = QRect(self._resize_start_rect)
-            dir = getattr(self, '_resize_dir', None)
+            dir = getattr(self, "_resize_dir", None)
             minw = self.minimumWidth()
             minh = self.minimumHeight()
-            adj_all = getattr(self, '_resize_adjacent_all', [])
+            adj_all = getattr(self, "_resize_adjacent_all", [])
             if dir:
-                if 'left' in dir:
+                if "left" in dir:
                     new_left = new_geom.left() + diff.x()
                     if new_geom.right() - new_left >= minw:
                         new_geom.setLeft(new_left)
-                if 'right' in dir:
+                if "right" in dir:
                     new_right = new_geom.right() + diff.x()
                     if new_right - new_geom.left() >= minw:
                         new_geom.setRight(new_right)
-                if 'top' in dir:
+                if "top" in dir:
                     new_top = new_geom.top() + diff.y()
                     if new_geom.bottom() - new_top >= minh:
                         new_geom.setTop(new_top)
-                if 'bottom' in dir:
+                if "bottom" in dir:
                     new_bottom = new_geom.bottom() + diff.y()
                     if new_bottom - new_geom.top() >= minh:
                         new_geom.setBottom(new_bottom)
@@ -161,7 +176,7 @@ class StickyMdiSubWindow(QMdiSubWindow):
                 ominw = win.minimumWidth()
                 ominh = win.minimumHeight()
                 handled = True
-                if dir == 'right' and adj_dir == 'left':
+                if dir == "right" and adj_dir == "left":
                     new_left = self.mapToParent(event.pos()).x()
                     fixed_right = other_rect.right()
                     new_width = fixed_right - new_left
@@ -169,7 +184,7 @@ class StickyMdiSubWindow(QMdiSubWindow):
                         other_rect.setLeft(new_left)
                         other_rect.setRight(fixed_right)
                         win.setGeometry(other_rect)
-                elif dir == 'left' and adj_dir == 'right':
+                elif dir == "left" and adj_dir == "right":
                     new_right = self.mapToParent(event.pos()).x()
                     fixed_left = other_rect.left()
                     new_width = new_right - fixed_left
@@ -177,7 +192,7 @@ class StickyMdiSubWindow(QMdiSubWindow):
                         other_rect.setLeft(fixed_left)
                         other_rect.setRight(new_right)
                         win.setGeometry(other_rect)
-                elif dir == 'bottom' and adj_dir == 'top':
+                elif dir == "bottom" and adj_dir == "top":
                     new_top = self.mapToParent(event.pos()).y()
                     fixed_bottom = other_rect.bottom()
                     new_height = fixed_bottom - new_top
@@ -185,7 +200,7 @@ class StickyMdiSubWindow(QMdiSubWindow):
                         other_rect.setTop(new_top)
                         other_rect.setBottom(fixed_bottom)
                         win.setGeometry(other_rect)
-                elif dir == 'top' and adj_dir == 'bottom':
+                elif dir == "top" and adj_dir == "bottom":
                     new_bottom = self.mapToParent(event.pos()).y()
                     fixed_top = other_rect.top()
                     new_height = new_bottom - fixed_top
@@ -193,28 +208,28 @@ class StickyMdiSubWindow(QMdiSubWindow):
                         other_rect.setTop(fixed_top)
                         other_rect.setBottom(new_bottom)
                         win.setGeometry(other_rect)
-                elif dir == 'right' and adj_dir == 'right':
+                elif dir == "right" and adj_dir == "right":
                     new_right = self.mapToParent(event.pos()).x()
                     fixed_left = other_rect.left()
                     new_width = new_right - fixed_left
                     if new_width >= ominw:
                         other_rect.setRight(new_right)
                         win.setGeometry(other_rect)
-                elif dir == 'left' and adj_dir == 'left':
+                elif dir == "left" and adj_dir == "left":
                     new_left = self.mapToParent(event.pos()).x()
                     fixed_right = other_rect.right()
                     new_width = fixed_right - new_left
                     if new_width >= ominw:
                         other_rect.setLeft(new_left)
                         win.setGeometry(other_rect)
-                elif dir == 'bottom' and adj_dir == 'bottom':
+                elif dir == "bottom" and adj_dir == "bottom":
                     new_bottom = self.mapToParent(event.pos()).y()
                     fixed_top = other_rect.top()
                     new_height = new_bottom - fixed_top
                     if new_height >= ominh:
                         other_rect.setBottom(new_bottom)
                         win.setGeometry(other_rect)
-                elif dir == 'top' and adj_dir == 'top':
+                elif dir == "top" and adj_dir == "top":
                     new_top = self.mapToParent(event.pos()).y()
                     fixed_bottom = other_rect.bottom()
                     new_height = fixed_bottom - new_top
@@ -248,21 +263,21 @@ class StickyMdiSubWindow(QMdiSubWindow):
         margin = 10
         w, h = self.width(), self.height()
         if pos.x() <= margin and pos.y() <= margin:
-            return 'topleft'
+            return "topleft"
         if pos.x() >= w - margin and pos.y() <= margin:
-            return 'topright'
+            return "topright"
         if pos.x() <= margin and pos.y() >= h - margin:
-            return 'bottomleft'
+            return "bottomleft"
         if pos.x() >= w - margin and pos.y() >= h - margin:
-            return 'bottomright'
+            return "bottomright"
         if pos.x() <= margin:
-            return 'left'
+            return "left"
         if pos.x() >= w - margin:
-            return 'right'
+            return "right"
         if pos.y() <= margin:
-            return 'top'
+            return "top"
         if pos.y() >= h - margin:
-            return 'bottom'
+            return "bottom"
         return None
 
     def stickyRect(self, rect, mdi_area, resize=False):
@@ -272,23 +287,39 @@ class StickyMdiSubWindow(QMdiSubWindow):
             if win is self:
                 continue
             other = win.geometry()
-            if abs(rect.top() - other.bottom()) < STICKY_DIST and \
-               rect.left() < other.right() and rect.right() > other.left():
-                if not resize or (resize and getattr(self, '_resize_dir', '').find('top') != -1):
+            if (
+                abs(rect.top() - other.bottom()) < STICKY_DIST
+                and rect.left() < other.right()
+                and rect.right() > other.left()
+            ):
+                if not resize or (
+                    resize and getattr(self, "_resize_dir", "").find("top") != -1
+                ):
                     rect.moveTop(other.bottom())
-            if abs(rect.bottom() - other.top()) < STICKY_DIST and \
-               rect.left() < other.right() and rect.right() > other.left():
-                if resize and getattr(self, '_resize_dir', '').find('bottom') != -1:
+            if (
+                abs(rect.bottom() - other.top()) < STICKY_DIST
+                and rect.left() < other.right()
+                and rect.right() > other.left()
+            ):
+                if resize and getattr(self, "_resize_dir", "").find("bottom") != -1:
                     rect.setBottom(other.top())
                 elif not resize:
                     rect.moveBottom(other.top())
-            if abs(rect.left() - other.right()) < STICKY_DIST and \
-               rect.top() < other.bottom() and rect.bottom() > other.top():
-                if not resize or (resize and getattr(self, '_resize_dir', '').find('left') != -1):
+            if (
+                abs(rect.left() - other.right()) < STICKY_DIST
+                and rect.top() < other.bottom()
+                and rect.bottom() > other.top()
+            ):
+                if not resize or (
+                    resize and getattr(self, "_resize_dir", "").find("left") != -1
+                ):
                     rect.moveLeft(other.right())
-            if abs(rect.right() - other.left()) < STICKY_DIST and \
-               rect.top() < other.bottom() and rect.bottom() > other.top():
-                if resize and getattr(self, '_resize_dir', '').find('right') != -1:
+            if (
+                abs(rect.right() - other.left()) < STICKY_DIST
+                and rect.top() < other.bottom()
+                and rect.bottom() > other.top()
+            ):
+                if resize and getattr(self, "_resize_dir", "").find("right") != -1:
                     rect.setRight(other.left())
                 elif not resize:
                     rect.moveRight(other.left())
@@ -298,7 +329,7 @@ class StickyMdiSubWindow(QMdiSubWindow):
             (rect.left(), area_rect.left(), rect.moveLeft),
             (rect.top(), area_rect.top(), rect.moveTop),
             (rect.right(), area_rect.right(), rect.setRight),
-            (rect.bottom(), area_rect.bottom(), rect.setBottom)
+            (rect.bottom(), area_rect.bottom(), rect.setBottom),
         ]:
             if abs(side - a_side) < STICKY_DIST:
                 set_func(a_side)
@@ -352,20 +383,40 @@ class StickyMdiSubWindow(QMdiSubWindow):
                         if win is self:
                             continue
                         other = win.geometry()
-                        if other.right() <= my_rect.left() and \
-                           other.bottom() > my_rect.top() and other.top() < my_rect.bottom():
+                        if (
+                            other.right() <= my_rect.left()
+                            and other.bottom() > my_rect.top()
+                            and other.top() < my_rect.bottom()
+                        ):
                             left = max(left, other.right())
-                        if other.left() >= my_rect.right() and \
-                           other.bottom() > my_rect.top() and other.top() < my_rect.bottom():
+                        if (
+                            other.left() >= my_rect.right()
+                            and other.bottom() > my_rect.top()
+                            and other.top() < my_rect.bottom()
+                        ):
                             right = min(right, other.left())
-                        if other.bottom() <= my_rect.top() and \
-                           other.right() > my_rect.left() and other.left() < my_rect.right():
+                        if (
+                            other.bottom() <= my_rect.top()
+                            and other.right() > my_rect.left()
+                            and other.left() < my_rect.right()
+                        ):
                             top = max(top, other.bottom())
-                        if other.top() >= my_rect.bottom() and \
-                           other.right() > my_rect.left() and other.left() < my_rect.right():
+                        if (
+                            other.top() >= my_rect.bottom()
+                            and other.right() > my_rect.left()
+                            and other.left() < my_rect.right()
+                        ):
                             bottom = min(bottom, other.top())
                     all_adj = True
-                    for v, a in zip([left, right, top, bottom], [area_rect.left(), area_rect.right(), area_rect.top(), area_rect.bottom()]):
+                    for v, a in zip(
+                        [left, right, top, bottom],
+                        [
+                            area_rect.left(),
+                            area_rect.right(),
+                            area_rect.top(),
+                            area_rect.bottom(),
+                        ],
+                    ):
                         if v == a:
                             all_adj = False
                             break
@@ -383,31 +434,43 @@ class StickyMdiSubWindow(QMdiSubWindow):
             parent = self.getMdiArea().parent()
             widget = self.widget()
             widget_type = ""
-            
+
             if widget:
-                if hasattr(widget, 'script_combo') and hasattr(widget, 'script_path'):
+                if hasattr(widget, "script_combo") and hasattr(widget, "script_path"):
                     widget_type = "Python"
-                    script = widget.script_path.text() if hasattr(widget, 'script_path') else "(不明)"
-                elif hasattr(widget, 'cmdline_combo'):
+                    script = (
+                        widget.script_path.text()
+                        if hasattr(widget, "script_path")
+                        else "(不明)"
+                    )
+                elif hasattr(widget, "cmdline_combo"):
                     widget_type = "Shell"
-                    cmdline = widget.cmdline_combo.currentText() if hasattr(widget, 'cmdline_combo') else "(不明)"
-            
-            if hasattr(parent, 'in_closing') and parent.in_closing:
+                    cmdline = (
+                        widget.cmdline_combo.currentText()
+                        if hasattr(widget, "cmdline_combo")
+                        else "(不明)"
+                    )
+
+            if hasattr(parent, "in_closing") and parent.in_closing:
                 # 終了処理中であれば何もせず閉じる
                 debug_print(f"[debug] Closing {widget_type} subwindow during shutdown")
             else:
                 # 個別に閉じる場合は設定を保存
-                if hasattr(parent, 'saveAllLaunchers'):
+                if hasattr(parent, "saveAllLaunchers"):
                     if widget_type == "Python":
-                        debug_print(f"[debug] Saving {widget_type} subwindow settings ({script})")
+                        debug_print(
+                            f"[debug] Saving {widget_type} subwindow settings ({script})"
+                        )
                     elif widget_type == "Shell":
-                        debug_print(f"[debug] Saving {widget_type} subwindow settings ({cmdline[:20]}...)")
+                        debug_print(
+                            f"[debug] Saving {widget_type} subwindow settings ({cmdline[:20]}...)"
+                        )
                     else:
                         debug_print(f"[debug] Saving unknown subwindow type settings")
-                    
+
                     # 親ウィンドウの保存処理を呼び出し
                     parent.saveAllLaunchers()
         except Exception as e:
             error_print(f"[error] Error during subwindow close processing: {e}")
-        
+
         super().closeEvent(event)

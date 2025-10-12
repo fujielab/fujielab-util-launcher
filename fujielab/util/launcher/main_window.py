@@ -1,4 +1,17 @@
-from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QMenuBar, QAction, QSizePolicy, QMdiArea, QFileDialog, QMessageBox, QToolBar, QMenu, QToolButton
+from PyQt5.QtWidgets import (
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QMenuBar,
+    QAction,
+    QSizePolicy,
+    QMdiArea,
+    QFileDialog,
+    QMessageBox,
+    QToolBar,
+    QMenu,
+    QToolButton,
+)
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtCore import Qt, QPoint, QRect
 from .i18n import tr, set_language, LANG
@@ -14,11 +27,13 @@ import math
 import sys
 import os
 
+
 class CustomMdiArea(QMdiArea):
     """
     カスタムMDIエリアクラス
     ウィンドウの元の位置に基づいて、最も近い適切なタイル位置に配置する機能を提供
     """
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -52,7 +67,9 @@ class CustomMdiArea(QMdiArea):
         cell_width = area_width / cols
         cell_height = area_height / rows
 
-        debug_print(f"[debug] Tile layout: {windows_count} windows, {cols} cols x {rows} rows, cell {cell_width}x{cell_height}")
+        debug_print(
+            f"[debug] Tile layout: {windows_count} windows, {cols} cols x {rows} rows, cell {cell_width}x{cell_height}"
+        )
 
         # 各グリッドセル位置を計算
         grid_cells = []
@@ -63,12 +80,12 @@ class CustomMdiArea(QMdiArea):
                         int(col * cell_width),
                         int(row * cell_height),
                         int(cell_width),
-                        int(cell_height)
+                        int(cell_height),
                     )
                     # セルの中心点を計算
                     cell_center = QPoint(
                         int(cell_rect.left() + cell_rect.width() / 2),
-                        int(cell_rect.top() + cell_rect.height() / 2)
+                        int(cell_rect.top() + cell_rect.height() / 2),
                     )
                     grid_cells.append((cell_rect, cell_center))
 
@@ -79,7 +96,7 @@ class CustomMdiArea(QMdiArea):
             window_rect = window.geometry()
             window_center = QPoint(
                 int(window_rect.left() + window_rect.width() / 2),
-                int(window_rect.top() + window_rect.height() / 2)
+                int(window_rect.top() + window_rect.height() / 2),
             )
             window_positions.append((window, window_center))
 
@@ -90,7 +107,7 @@ class CustomMdiArea(QMdiArea):
         # 各グリッドセルについて、最も近いまだ割り当てられていないウィンドウを見つける
         for cell_rect, cell_center in grid_cells:
             best_window = None
-            min_distance = float('inf')
+            min_distance = float("inf")
 
             for window, window_center in window_positions:
                 if window in assigned_windows:
@@ -98,8 +115,8 @@ class CustomMdiArea(QMdiArea):
 
                 # 中心点間の距離を計算
                 distance = math.sqrt(
-                    (cell_center.x() - window_center.x()) ** 2 +
-                    (cell_center.y() - window_center.y()) ** 2
+                    (cell_center.x() - window_center.x()) ** 2
+                    + (cell_center.y() - window_center.y()) ** 2
                 )
 
                 if distance < min_distance:
@@ -111,8 +128,10 @@ class CustomMdiArea(QMdiArea):
                 assignments.append((best_window, cell_rect))
 
         # 残っているウィンドウがあれば、残りのセルに割り当て
-        remaining_windows = [w for w, _ in window_positions if w not in assigned_windows]
-        remaining_cells = [cell for cell, _ in grid_cells[len(assignments):]]
+        remaining_windows = [
+            w for w, _ in window_positions if w not in assigned_windows
+        ]
+        remaining_cells = [cell for cell, _ in grid_cells[len(assignments) :]]
 
         for window, cell_rect in zip(remaining_windows, remaining_cells):
             assignments.append((window, cell_rect))
@@ -122,6 +141,7 @@ class CustomMdiArea(QMdiArea):
             window.setGeometry(cell_rect)
 
         debug_print(f"[debug] Tile layout finished: placed {len(assignments)} windows")
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -133,7 +153,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         debug_print("[debug] ======== MainWindow initialization start ========")
         debug_print(f"[debug] Current UI language: {LANG}")
-        self.setWindowTitle('FUJIE Lab. Program Launcher')
+        self.setWindowTitle("FUJIE Lab. Program Launcher")
         central = QWidget()
         self.setCentralWidget(central)
         layout = QVBoxLayout(central)
@@ -150,12 +170,14 @@ class MainWindow(QMainWindow):
             # MacOSではグローバルメニューバーを使用
             self.tool_bar = None
         else:
-            
+
             # MacOS以外ではカスタムツールバーを使用してメニューを作成
             self.tool_bar = QToolBar(tr("Main Menu"), self)
             self.tool_bar.setMovable(False)  # 移動できないように設定
             self.tool_bar.setFloatable(False)  # フロート不可
-            self.tool_bar.setContextMenuPolicy(Qt.PreventContextMenu)  # コンテキストメニューを無効化
+            self.tool_bar.setContextMenuPolicy(
+                Qt.PreventContextMenu
+            )  # コンテキストメニューを無効化
             self.tool_bar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             self.tool_bar.setMinimumHeight(28)  # メニューの高さを調整
             layout.addWidget(self.tool_bar, stretch=0)
@@ -174,7 +196,7 @@ class MainWindow(QMainWindow):
         self.in_closing = False
         # MDIエリアのサブウィンドウアクティブ化時に設定を保存
         self.mdi.subWindowActivated.connect(self.saveAllLaunchers)
-          # 設定マネージャの初期化
+        # 設定マネージャの初期化
         self.config_manager = LauncherConfigManager()
         self._geometry_restored = False
         self._suppress_save = True
@@ -191,86 +213,88 @@ class MainWindow(QMainWindow):
         self.menu_bar.clear()
 
         # ===== ファイルメニュー =====
-        fileMenu = QMenu(tr('File'), self)
+        fileMenu = QMenu(tr("File"), self)
 
         # 新規Pythonランチャー
-        newPythonLauncherAct = QAction(tr('New Python Launcher'), self)
-        newPythonLauncherAct.setShortcut(QKeySequence('Ctrl+N'))
-        newPythonLauncherAct.triggered.connect(lambda: self.createPythonLauncherWindow())
+        newPythonLauncherAct = QAction(tr("New Python Launcher"), self)
+        newPythonLauncherAct.setShortcut(QKeySequence("Ctrl+N"))
+        newPythonLauncherAct.triggered.connect(
+            lambda: self.createPythonLauncherWindow()
+        )
         fileMenu.addAction(newPythonLauncherAct)
 
         # 新規シェルランチャー
-        newShellLauncherAct = QAction(tr('New Shell Launcher'), self)
-        newShellLauncherAct.setShortcut(QKeySequence('Shift+Ctrl+N'))
+        newShellLauncherAct = QAction(tr("New Shell Launcher"), self)
+        newShellLauncherAct.setShortcut(QKeySequence("Shift+Ctrl+N"))
         newShellLauncherAct.triggered.connect(lambda: self.createShellLauncherWindow())
         fileMenu.addAction(newShellLauncherAct)
 
         fileMenu.addSeparator()
 
         # 設定のインポート
-        importAct = QAction(tr('Import Settings'), self)
-        importAct.setShortcut(QKeySequence('Ctrl+I'))
+        importAct = QAction(tr("Import Settings"), self)
+        importAct.setShortcut(QKeySequence("Ctrl+I"))
         importAct.triggered.connect(self.importConfig)
         fileMenu.addAction(importAct)
 
         # 設定のエクスポート
-        exportAct = QAction(tr('Export Settings'), self)
-        exportAct.setShortcut(QKeySequence('Shift+Ctrl+S'))
+        exportAct = QAction(tr("Export Settings"), self)
+        exportAct.setShortcut(QKeySequence("Shift+Ctrl+S"))
         exportAct.triggered.connect(self.exportConfig)
         fileMenu.addAction(exportAct)
 
         fileMenu.addSeparator()
 
         # 終了
-        exitAct = QAction(tr('Exit'), self)
+        exitAct = QAction(tr("Exit"), self)
         exitAct.setShortcut(QKeySequence.Quit)
         exitAct.triggered.connect(self.close)
         fileMenu.addAction(exitAct)
 
         # MacOS以外の場合のみ、ツールバーにメニューアクションを追加
         if not self.is_macos:
-            fileMenuAction = QAction(tr('File'), self)
+            fileMenuAction = QAction(tr("File"), self)
             fileMenuAction.setMenu(fileMenu)
             self.addMenuActionToToolbar(fileMenuAction)
 
         # ===== 整列メニュー =====
-        arrangeMenu = QMenu(tr('Arrange'), self)
+        arrangeMenu = QMenu(tr("Arrange"), self)
 
         # タイル
-        tileAct = QAction(tr('Tile'), self)
+        tileAct = QAction(tr("Tile"), self)
         tileAct.triggered.connect(self.mdi.tileSubWindows)
         arrangeMenu.addAction(tileAct)
 
         # カスケード
-        cascadeAct = QAction(tr('Cascade'), self)
+        cascadeAct = QAction(tr("Cascade"), self)
         cascadeAct.triggered.connect(self.mdi.cascadeSubWindows)
         arrangeMenu.addAction(cascadeAct)
 
         # MacOS以外の場合のみ、ツールバーにメニューアクションを追加
         if not self.is_macos:
-            arrangeMenuAction = QAction(tr('Arrange'), self)
+            arrangeMenuAction = QAction(tr("Arrange"), self)
             arrangeMenuAction.setMenu(arrangeMenu)
             self.addMenuActionToToolbar(arrangeMenuAction)
 
         # ===== 設定メニュー =====
-        settingsMenu = QMenu(tr('Settings'), self)
+        settingsMenu = QMenu(tr("Settings"), self)
 
         # グローバル設定
-        settingsAct = QAction(tr('Global Settings'), self)
-        settingsAct.setShortcut(QKeySequence('Ctrl+,'))
+        settingsAct = QAction(tr("Global Settings"), self)
+        settingsAct.setShortcut(QKeySequence("Ctrl+,"))
         settingsAct.triggered.connect(self.openSettingsDialog)
         settingsMenu.addAction(settingsAct)
 
         # MacOS以外の場合のみ、ツールバーにメニューアクションを追加
         if not self.is_macos:
-            settingsMenuAction = QAction(tr('Settings'), self)
+            settingsMenuAction = QAction(tr("Settings"), self)
             settingsMenuAction.setMenu(settingsMenu)
             self.addMenuActionToToolbar(settingsMenuAction)
 
         # メニューバーにメニューを追加
         self.menu_bar.addMenu(fileMenu)
         self.menu_bar.addMenu(arrangeMenu)
-        self.menu_bar.addMenu(settingsMenu)        # ツールバーとメニューのスタイル設定
+        self.menu_bar.addMenu(settingsMenu)  # ツールバーとメニューのスタイル設定
         style_sheet = """
         QToolBar {
             background: #ffffff;
@@ -328,8 +352,8 @@ class MainWindow(QMainWindow):
         if config is None:
             config = {}
             config_manager = self.config_manager
-            config['interpreter'] = config_manager.get_default_interpreter_path()
-            config['workdir'] = config_manager.get_default_workdir()
+            config["interpreter"] = config_manager.get_default_interpreter_path()
+            config["workdir"] = config_manager.get_default_workdir()
         # print(config)
         # import ipdb; ipdb.set_trace()
         widget = ScriptRunnerWidget(config=config)
@@ -347,11 +371,12 @@ class MainWindow(QMainWindow):
     def createShellLauncherWindow(self, config=None, geometry=None):
         sub = StickyMdiSubWindow()
         from .shell_runner import ShellRunnerWidget
+
         # グローバル設定を反映したconfigを生成
         if config is None:
             config = {}
             config_manager = self.config_manager
-            config['workdir'] = config_manager.get_default_workdir()
+            config["workdir"] = config_manager.get_default_workdir()
         widget = ShellRunnerWidget()
         widget.apply_config(config)
         sub.setWidget(widget)
@@ -368,17 +393,26 @@ class MainWindow(QMainWindow):
     def eventFilter(self, obj, event):
         # ウィンドウ移動・リサイズ・クローズ時に保存
         from PyQt5.QtCore import QEvent
+
         if event.type() in (QEvent.Move, QEvent.Resize, QEvent.Close):
             self.saveAllLaunchers()
         return super().eventFilter(obj, event)
 
     def importConfig(self):
-        path, _ = QFileDialog.getOpenFileName(self, tr("Import Settings File"), filter="YAML Files (*.yaml *.yml)")
+        path, _ = QFileDialog.getOpenFileName(
+            self, tr("Import Settings File"), filter="YAML Files (*.yaml *.yml)"
+        )
         if path:
             self.config_manager.import_config(path)
-            reply = QMessageBox.question(self, tr("Restart Confirmation"), tr("Configuration imported. Restart?"), QMessageBox.Yes | QMessageBox.No)
+            reply = QMessageBox.question(
+                self,
+                tr("Restart Confirmation"),
+                tr("Configuration imported. Restart?"),
+                QMessageBox.Yes | QMessageBox.No,
+            )
             if reply == QMessageBox.Yes:
                 import sys, os
+
                 os.execv(sys.executable, [sys.executable] + sys.argv)
 
     def importConfigFromFile(self, path):
@@ -399,14 +433,20 @@ class MainWindow(QMainWindow):
                 error_print(f"[error] Failed to import settings file: {e}")
 
     def exportConfig(self):
-        path, _ = QFileDialog.getSaveFileName(self, tr("Export Settings File"), filter="YAML Files (*.yaml *.yml)")
+        path, _ = QFileDialog.getSaveFileName(
+            self, tr("Export Settings File"), filter="YAML Files (*.yaml *.yml)"
+        )
         if path:
             self.config_manager.export(path)
-            QMessageBox.information(self, tr("Export Completed"), tr("Configuration exported."))
+            QMessageBox.information(
+                self, tr("Export Completed"), tr("Configuration exported.")
+            )
 
     def saveAllLaunchers(self):
-        if getattr(self, '_suppress_save', False):
-            debug_print("[debug] saveAllLaunchers: skipping because saving is suppressed")
+        if getattr(self, "_suppress_save", False):
+            debug_print(
+                "[debug] saveAllLaunchers: skipping because saving is suppressed"
+            )
             return
 
         launchers = []
@@ -416,24 +456,32 @@ class MainWindow(QMainWindow):
             return
 
         subwindow_count = len(self.mdi.subWindowList())
-        in_closing = hasattr(self, 'in_closing') and self.in_closing
-        debug_print(f"[debug] saveAllLaunchers: subwindow count {subwindow_count}, closing={in_closing}")
+        in_closing = hasattr(self, "in_closing") and self.in_closing
+        debug_print(
+            f"[debug] saveAllLaunchers: subwindow count {subwindow_count}, closing={in_closing}"
+        )
 
         # 終了処理中はキャッシュを使用（closeEventで更新済み）
-        if in_closing and hasattr(self, 'launcher_cache') and self.launcher_cache:
-            debug_print(f"[debug] During closing: using cached launcher settings ({len(self.launcher_cache)} items)")
+        if in_closing and hasattr(self, "launcher_cache") and self.launcher_cache:
+            debug_print(
+                f"[debug] During closing: using cached launcher settings ({len(self.launcher_cache)} items)"
+            )
             launchers = self.launcher_cache
 
             # キャッシュ内容のデバッグ出力
             for idx, launcher in enumerate(self.launcher_cache):
-                ltype = launcher.get('type')
-                config = launcher.get('config', {})
-                if ltype == 'python':
-                    script = config.get('script', '(未設定)')
-                    debug_print(f"[debug] Cache[{idx}] Python config: script={Path(script).name if script else '(unset)'}")
+                ltype = launcher.get("type")
+                config = launcher.get("config", {})
+                if ltype == "python":
+                    script = config.get("script", "(未設定)")
+                    debug_print(
+                        f"[debug] Cache[{idx}] Python config: script={Path(script).name if script else '(unset)'}"
+                    )
                 else:
-                    cmdline = config.get('cmdline', '(未設定)')
-                    debug_print(f"[debug] Cache[{idx}] Shell config: cmdline={cmdline[:20] + '...' if len(cmdline) > 20 else cmdline}")
+                    cmdline = config.get("cmdline", "(未設定)")
+                    debug_print(
+                        f"[debug] Cache[{idx}] Shell config: cmdline={cmdline[:20] + '...' if len(cmdline) > 20 else cmdline}"
+                    )
 
         # サブウィンドウが存在する場合、現在の状態からキャッシュを更新
         elif subwindow_count > 0:
@@ -446,9 +494,9 @@ class MainWindow(QMainWindow):
             for sub in self.mdi.subWindowList():
                 widget = sub.widget()
                 if isinstance(widget, ScriptRunnerWidget):
-                    ltype = 'python'
+                    ltype = "python"
                 elif isinstance(widget, ShellRunnerWidget):
-                    ltype = 'shell'
+                    ltype = "shell"
                 else:
                     continue
 
@@ -457,26 +505,26 @@ class MainWindow(QMainWindow):
                     config = widget.get_config()
 
                     # 設定内容のデバッグ出力
-                    if ltype == 'python':
-                        script = config.get('script', '(unset)')
-                        interpreter = config.get('interpreter', '(unset)')
-                        workdir = config.get('workdir', '(unset)')
+                    if ltype == "python":
+                        script = config.get("script", "(unset)")
+                        interpreter = config.get("interpreter", "(unset)")
+                        workdir = config.get("workdir", "(unset)")
                         debug_print(
                             f"[debug] Python config: script={Path(script).name if script else '(unset)'}, "
                             f"interpreter={Path(interpreter).name if interpreter else '(unset)'}, "
                             f"workdir={Path(workdir).name if workdir else '(unset)'}"
                         )
                     else:
-                        cmdline = config.get('cmdline', '(unset)')
-                        workdir = config.get('workdir', '(unset)')
+                        cmdline = config.get("cmdline", "(unset)")
+                        workdir = config.get("workdir", "(unset)")
                         debug_print(
                             f"[debug] Shell config: cmdline={cmdline[:20] + '...' if len(cmdline) > 20 else cmdline}, "
                             f"workdir={Path(workdir).name if workdir else '(unset)'}"
                         )
                     launcher_info = {
-                        'type': ltype,
-                        'geometry': [geo.x(), geo.y(), geo.width(), geo.height()],
-                        'config': config
+                        "type": ltype,
+                        "geometry": [geo.x(), geo.y(), geo.width(), geo.height()],
+                        "config": config,
                     }
 
                     launchers.append(launcher_info)
@@ -488,13 +536,17 @@ class MainWindow(QMainWindow):
                 except Exception as e:
                     error_print(f"[error] Error retrieving settings from widget: {e}")
         # サブウィンドウが0の場合でも、終了処理でなければキャッシュが破棄されないようにする
-        elif not in_closing and hasattr(self, 'launcher_cache') and self.launcher_cache:
-            debug_print(f"[debug] No subwindows and not closing: using cached launcher settings ({len(self.launcher_cache)} items)")
+        elif not in_closing and hasattr(self, "launcher_cache") and self.launcher_cache:
+            debug_print(
+                f"[debug] No subwindows and not closing: using cached launcher settings ({len(self.launcher_cache)} items)"
+            )
             launchers = self.launcher_cache
 
         main_geo = self.geometry()
         self.config_manager.set_launchers(launchers)
-        self.config_manager.set_mainwindow_geometry([main_geo.x(), main_geo.y(), main_geo.width(), main_geo.height()])
+        self.config_manager.set_mainwindow_geometry(
+            [main_geo.x(), main_geo.y(), main_geo.width(), main_geo.height()]
+        )
         self.config_manager.set_mainwindow_state(self.isMaximized())
         debug_print(f"[debug] Saved settings: launcher count={len(launchers)}")
 
@@ -514,17 +566,19 @@ class MainWindow(QMainWindow):
         self.launcher_cache = launchers.copy() if launchers else []
 
         for idx, l in enumerate(launchers):
-            ltype = l.get('type')
-            geometry = l.get('geometry')
-            config = l.get('config', {})
+            ltype = l.get("type")
+            geometry = l.get("geometry")
+            config = l.get("config", {})
 
-            if ltype == 'python':
-                script = config.get('script', '(unset)')
+            if ltype == "python":
+                script = config.get("script", "(unset)")
                 debug_print(f"[debug] Restoring entry {idx+1}: Python script={script}")
                 self.createPythonLauncherWindow(config=config, geometry=geometry)
-            elif ltype == 'shell':
-                cmdline = config.get('cmdline', '(unset)')
-                debug_print(f"[debug] Restoring entry {idx+1}: Shell cmdline={cmdline[:20]+'...' if len(cmdline) > 20 else cmdline}")
+            elif ltype == "shell":
+                cmdline = config.get("cmdline", "(unset)")
+                debug_print(
+                    f"[debug] Restoring entry {idx+1}: Shell cmdline={cmdline[:20]+'...' if len(cmdline) > 20 else cmdline}"
+                )
                 self.createShellLauncherWindow(config=config, geometry=geometry)
 
     def resizeEvent(self, event):
@@ -546,7 +600,7 @@ class MainWindow(QMainWindow):
 
     def showEvent(self, event):
         super().showEvent(event)
-        if not getattr(self, '_geometry_restored', False):
+        if not getattr(self, "_geometry_restored", False):
             geo = self.config_manager.get_mainwindow_geometry()
             maximized = self.config_manager.get_mainwindow_state()
             if maximized:
@@ -563,6 +617,7 @@ class MainWindow(QMainWindow):
 
     def changeEvent(self, event):
         from PyQt5.QtCore import QEvent
+
         if event.type() == QEvent.WindowStateChange:
             self.saveAllLaunchers()
         super().changeEvent(event)
@@ -570,10 +625,19 @@ class MainWindow(QMainWindow):
     def openSettingsDialog(self):
         from .settings_dialog import GlobalSettingsDialog
         from .script_runner import ScriptRunnerWidget
+
         interp_map = ScriptRunnerWidget().get_interpreters()
         current_label = self.config_manager.get_default_interpreter_label()
         current_dir = self.config_manager.get_default_workdir()
-        dialog = GlobalSettingsDialog(self, envs=list(interp_map.keys()), current_env=current_label, current_dir=current_dir, get_interpreters_func=lambda force_refresh=False: ScriptRunnerWidget().get_interpreters(force_refresh))
+        dialog = GlobalSettingsDialog(
+            self,
+            envs=list(interp_map.keys()),
+            current_env=current_label,
+            current_dir=current_dir,
+            get_interpreters_func=lambda force_refresh=False: ScriptRunnerWidget().get_interpreters(
+                force_refresh
+            ),
+        )
         if dialog.exec_() == dialog.Accepted:
             label, workdir = dialog.get_values()
             path = interp_map.get(label, "python")
@@ -602,9 +666,9 @@ class MainWindow(QMainWindow):
                 continue
 
             if isinstance(widget, ScriptRunnerWidget):
-                ltype = 'python'
+                ltype = "python"
             elif isinstance(widget, ShellRunnerWidget):
-                ltype = 'shell'
+                ltype = "shell"
             else:
                 continue
 
@@ -612,22 +676,26 @@ class MainWindow(QMainWindow):
             try:
                 config = widget.get_config()
                 launcher_info = {
-                    'type': ltype,
-                    'geometry': [geo.x(), geo.y(), geo.width(), geo.height()],
-                    'config': config
+                    "type": ltype,
+                    "geometry": [geo.x(), geo.y(), geo.width(), geo.height()],
+                    "config": config,
                 }
                 self.launcher_cache.append(launcher_info)
 
                 # 設定内容のデバッグ出力
-                if ltype == 'python':
-                    script = config.get('script', '(unset)')
-                    interpreter = config.get('interpreter', '(unset)')
-                    workdir = config.get('workdir', '(unset)')
-                    debug_print(f"[debug] Cached Python config: script={script}, interpreter={interpreter}")
+                if ltype == "python":
+                    script = config.get("script", "(unset)")
+                    interpreter = config.get("interpreter", "(unset)")
+                    workdir = config.get("workdir", "(unset)")
+                    debug_print(
+                        f"[debug] Cached Python config: script={script}, interpreter={interpreter}"
+                    )
                 else:
-                    cmdline = config.get('cmdline', '(unset)')
-                    workdir = config.get('workdir', '(unset)')
-                    debug_print(f"[debug] Cached Shell config: cmdline={cmdline[:30]}...")
+                    cmdline = config.get("cmdline", "(unset)")
+                    workdir = config.get("workdir", "(unset)")
+                    debug_print(
+                        f"[debug] Cached Shell config: cmdline={cmdline[:30]}..."
+                    )
 
             except Exception as e:
                 error_print(f"[error] Error retrieving widget settings on close: {e}")
@@ -643,7 +711,9 @@ class MainWindow(QMainWindow):
         for window in self.mdi.subWindowList():
             window.close()
 
-        debug_print("[debug] ======== MainWindow closeEvent: shutdown complete ========")
+        debug_print(
+            "[debug] ======== MainWindow closeEvent: shutdown complete ========"
+        )
         event.accept()
 
     def showMenuFromAction(self, action):
@@ -656,7 +726,12 @@ class MainWindow(QMainWindow):
             # アクションのボタンの位置と大きさを取得
             button = None
             for widget in self.tool_bar.children():
-                if isinstance(widget, QWidget) and hasattr(widget, 'actions') and widget.actions() and action in widget.actions():
+                if (
+                    isinstance(widget, QWidget)
+                    and hasattr(widget, "actions")
+                    and widget.actions()
+                    and action in widget.actions()
+                ):
                     button = widget
                     break
 
@@ -680,10 +755,14 @@ class MainWindow(QMainWindow):
         button.setAutoRaise(True)  # フラットなスタイル
 
         # メニューインジケーター（"^"記号）を非表示にする
-        button.setStyleSheet("QToolButton::menu-indicator { width: 0; height: 0; image: none; }")
+        button.setStyleSheet(
+            "QToolButton::menu-indicator { width: 0; height: 0; image: none; }"
+        )
 
         # ボタンのサイズポリシーを設定
         textWidth = button.fontMetrics().boundingRect(button.text()).width()
-        button.setMinimumWidth(max(60, textWidth + 12))  # 文字幅+余白（インジケーター無しなので余白減少）
+        button.setMinimumWidth(
+            max(60, textWidth + 12)
+        )  # 文字幅+余白（インジケーター無しなので余白減少）
 
         self.tool_bar.addWidget(button)
