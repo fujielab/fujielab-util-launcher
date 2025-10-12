@@ -125,6 +125,11 @@ class CustomMdiArea(QMdiArea):
 
 class MainWindow(QMainWindow):
     def __init__(self):
+        # `saveAllLaunchers` can be triggered by Qt events during the
+        # QMainWindow initialisation (for example, moveEvent).  Ensure that the
+        # `mdi` attribute always exists before calling `super().__init__()` so
+        # that those early events do not cause attribute errors.
+        self.mdi = None
         super().__init__()
         debug_print("[debug] ======== MainWindow initialization start ========")
         debug_print(f"[debug] Current UI language: {LANG}")
@@ -405,6 +410,11 @@ class MainWindow(QMainWindow):
             return
 
         launchers = []
+
+        if not getattr(self, "mdi", None):
+            debug_print("[debug] saveAllLaunchers: mdi area not initialised yet")
+            return
+
         subwindow_count = len(self.mdi.subWindowList())
         in_closing = hasattr(self, 'in_closing') and self.in_closing
         debug_print(f"[debug] saveAllLaunchers: subwindow count {subwindow_count}, closing={in_closing}")
