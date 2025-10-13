@@ -20,7 +20,7 @@ fujielab-launcher [オプション]
 - `--version`: バージョン情報を表示して終了します。
 - `--lang`: UIの言語を指定します (`en` または `ja`)。省略した場合はシステムのロ
   ケールに従います。
-- `--create-shortcut`: (Windows専用) 簡単にアクセスできるようデスクトップにショートカットを作成します。
+- `--create-shortcut`: Windowsではデスクトップに、macOSではApplicationsフォルダにショートカットを作成します。
 - `-h`, `--help`: ヘルプメッセージを表示して終了します。
 
 ### デバッグモード
@@ -46,17 +46,15 @@ fujielab-launcher --config /path/to/your/custom_config.yaml
 
 これは異なる設定プロファイル間を切り替えたり、別のシステムから設定をインポートする場合に便利です。
 
-### Windows限定機能
+### ショートカット作成
 
-#### デスクトップショートカットの作成
-
-Windows環境では、簡単にアクセスできるようにデスクトップにショートカットを作成できます：
+Windowsではデスクトップに、macOSではApplicationsフォルダにショートカットを作成できます：
 
 ```cmd
 fujielab-launcher --create-shortcut
 ```
 
-これによりプログラムを直接起動するデスクトップ上のショートカットが作成されます。このオプションは`pywin32`パッケージのインストールが必要です：
+これによりプログラムを直接起動するショートカットが作成されます。Windowsでは`pywin32`パッケージのインストールが必要です：
 
 ```cmd
 pip install pywin32

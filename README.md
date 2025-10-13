@@ -20,7 +20,7 @@ fujielab-launcher [options]
 - `--version`: Display version information and exit.
 - `--lang`: Select UI language (`en` or `ja`). If omitted, the system locale is
   used.
-- `--create-shortcut`: (Windows only) Create a shortcut on the Desktop for easy access.
+- `--create-shortcut`: Create a shortcut on Windows (Desktop) or macOS (Applications folder).
 - `-h`, `--help`: Display help message and exit.
 
 ### Debug Mode
@@ -46,17 +46,15 @@ fujielab-launcher --config /path/to/your/custom_config.yaml
 
 This is useful for switching between different configuration profiles or importing settings from another system.
 
-### Windows-Specific Features
+### Creating Shortcuts
 
-#### Creating Desktop Shortcut
-
-On Windows systems, you can create a Desktop shortcut for easy access:
+You can create a shortcut for quick access. On Windows this is placed on the Desktop, while on macOS it will be created in the Applications folder:
 
 ```cmd
 fujielab-launcher --create-shortcut
 ```
 
-This will create a shortcut on your Desktop that launches the program directly. This option requires the `pywin32` package to be installed:
+This will create a shortcut on your Desktop (Windows) or in the Applications folder (macOS) that launches the program directly. On Windows, this option requires the `pywin32` package to be installed:
 
 ```cmd
 pip install pywin32
