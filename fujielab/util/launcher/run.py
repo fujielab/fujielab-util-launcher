@@ -169,11 +169,17 @@ def parse_arguments():
 
     # Shortcut creation option for supported OS
     if platform.system() == "Windows":
-        parser.add_argument('--create-shortcut', action='store_true',
-                        help=tr('Create a shortcut on the Windows Desktop. Windows only.'))
+        parser.add_argument(
+            "--create-shortcut",
+            action="store_true",
+            help=tr("Create a shortcut on the Windows Desktop. Windows only."),
+        )
     elif platform.system() == "Darwin":
-        parser.add_argument('--create-shortcut', action='store_true',
-                        help=tr('Create a shortcut in the Applications folder. macOS only.'))
+        parser.add_argument(
+            "--create-shortcut",
+            action="store_true",
+            help=tr("Create a shortcut in the Applications folder. macOS only."),
+        )
 
     return parser.parse_args(remaining), known.lang
 
@@ -193,11 +199,11 @@ def main():
 
     # バージョン情報表示
     if args.version:
-        print("Fujielab Utility Launcher v0.2.1")
+        print("Fujielab Utility Launcher v0.2.2")
         return 0
 
     # Shortcut creation for supported OS
-    if hasattr(args, 'create_shortcut') and args.create_shortcut:
+    if hasattr(args, "create_shortcut") and args.create_shortcut:
         if platform.system() == "Windows":
             success = create_windows_shortcut()
         elif platform.system() == "Darwin":

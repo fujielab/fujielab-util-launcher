@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.2] - 2025-10-13
+
+### Changed
+- --create-shortcut argument now supports MacOS.
+- Bug fixes.
+
 ## [0.2.1] - 2025-06-19
 
 ### Changed

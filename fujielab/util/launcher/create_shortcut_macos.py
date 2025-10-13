@@ -69,8 +69,9 @@ def _pick_app_dir(base_dir: Path):
         return preferred, False, None
 
     error_print(
-        tr("Warning: Could not replace existing shortcut. Keeping the old app bundle: {}")
-        .format(preferred)
+        tr(
+            "Warning: Could not replace existing shortcut. Keeping the old app bundle: {}"
+        ).format(preferred)
     )
     if err:
         debug_print(f"[debug] Preferred removal error: {err}")
@@ -88,7 +89,9 @@ def _pick_app_dir(base_dir: Path):
                 print(tr("Using alternative fallback location: {}").format(fallback))
             return fallback, True, err
         if fallback_err:
-            debug_print(f"[debug] Fallback removal error for {fallback}: {fallback_err}")
+            debug_print(
+                f"[debug] Fallback removal error for {fallback}: {fallback_err}"
+            )
 
     return None, True, err
 
@@ -161,7 +164,9 @@ def create_macos_shortcut():
         icon_icns = _ensure_icon(resources_dir, package_dir)
 
         bundle_name = app_dir.stem
-        identifier_suffix = re.sub(r"[^A-Za-z0-9]+", "-", bundle_name).strip("-").lower()
+        identifier_suffix = (
+            re.sub(r"[^A-Za-z0-9]+", "-", bundle_name).strip("-").lower()
+        )
         bundle_identifier = "com.fujielab.launcher"
         if identifier_suffix and identifier_suffix != "fujielab-launcher":
             bundle_identifier = f"{bundle_identifier}.{identifier_suffix}"
@@ -184,7 +189,9 @@ def create_macos_shortcut():
 
         run_sh = macos_dir / "run.sh"
         with open(run_sh, "w", encoding="utf-8") as f:
-            f.write(f"#!/bin/bash\n\"{sys.executable}\" -m fujielab.util.launcher.run \"$@\"\n")
+            f.write(
+                f'#!/bin/bash\n"{sys.executable}" -m fujielab.util.launcher.run "$@"\n'
+            )
         os.chmod(run_sh, 0o755)
 
         if used_fallback:
